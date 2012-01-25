@@ -374,13 +374,16 @@ sub exclude
 
 =begin private 
 
-=item log, logf
+=item log, logf, loggable_pathname
 
 The C<log> method is used by C<unpack> to send text to the logfile.
 The C<logf> method takes a filename and a hash, and logs a JSON formatted line.
 The trailing newline character of a line is delayed; it is printed by the next call to 
 C<log> or C<logf>. In case of C<logf>, a comma is emitted before the newline 
 from the second call onward.
+
+The C<loggable_pathname> shortens a path to be relative to either
+$self->{destdir} or $self->{input} unless $self->{log_fullpath} is true.
 
 =end private
 
