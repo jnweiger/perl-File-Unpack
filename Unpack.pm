@@ -927,6 +927,7 @@ sub unpack
 		  # a symlink backwards means, there is nothing to unpack here. take it as is.
 		  unlink $unpacked;
 		  $data->{passed} = $h->{name};
+		  $data->{input} = $self->loggable_pathname($archive);
 
 		  if ($archive =~ m{^\Q$self->{destdir}\E})
 		    {
