@@ -40,6 +40,9 @@ How to decode Metamail contents?
 ================================
  The firt part is usually html, and thus file -i says text/html
  ignoring the mime headers.
+ 
+-> file_unpack -v -m 
+  shows the multipart; header in the third filed.
 
  Content-Type: multipart/alternative;
  Content-Type: multipart/
@@ -50,6 +53,8 @@ metamail -w -x < saved-mail-body-from-mutt
 ## often says says
 # metamail: Incomplete multipart message -- unexpected EOF
 # Cannot handle any part of multipart/alternative message
+
+-> use perl-MIME-tools, this is more flexible.
 
 # when I extract the parts between the boundary string and feed this
 # to metamail one by one, it works well.
