@@ -74,7 +74,7 @@ use POSIX ();
 
 =head1 NAME
 
-File::Unpack - An aggressive bz2/gz/zip/tar/cpio/rpm/deb/cab/lzma/7z/rar/... archive unpacker, based on mime-types
+File::Unpack - A strong bz2/gz/zip/tar/cpio/rpm/deb/cab/lzma/7z/rar/... archive unpacker, based on mime-types
 
 =head1 VERSION
 
@@ -207,11 +207,13 @@ This perl module comes with an executable script:
 /usr/bin/file_unpack [-1] [-m] ARCHIVE...
 
 
-File::Unpack is an aggressive unpacker for archive files. Aggressive means, it can 
-recursivly descend into freshly unpacked files, if they are archives themselves.
-It also uncompresses files where needed. File::Unpack will extract
-as much readable text (ascii or any other encoding) as possible.
-Most of the currently known archive file formats are supported.
+File::Unpack is an unpacker for archive files. We call
+it strong, because it is not fooled by file suffixes, or multiply wrapped packages.
+It reliably detects mime-types and recursivly descends into each archive found
+until it finally exposes all unpackable payload contents. 
+A precise logfile can be written, describing mimetypes and unpack actions.
+Most of the known archive file formats are supported. Shell-script-style
+plugins can be added to support additinal formats.
 
     use File::Unpack;
 

@@ -14,6 +14,7 @@ helper/application=x-iso9660-image
 
 contrib/stringsx.pl
 contrib/stringsx.c
+contrib/multipart_mime.pl
 
 t/00-load.t
 t/manifest.t
@@ -39,4 +40,6 @@ t/data/xterm-snippet.desktop
 t/data/lxknf09SCc0.bin
 t/data/monotone.info
 t/data/pdftex-a.txt
+t/data/test.mht
+
 META.yml                                 Module meta-data (added by MakeMaker)

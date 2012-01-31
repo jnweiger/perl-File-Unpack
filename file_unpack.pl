@@ -94,7 +94,7 @@ Valid options are:
         Default: exclude-vcs=$exclude_vcs .
 
  -1 --one-shot
- 	Make unpacker non-agressive. Perform one level of unpacking only.
+ 	Make unpacker non-recursive. Perform one level of unpacking only.
 
  -h --help -?
         Print this online help.

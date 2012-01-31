@@ -46,5 +46,17 @@ WriteMakefile(
     },
     # don't use bzip2 for cpan uploads, win32 smoke testers cannot unpack bz2.
     # dist                => { COMPRESS => 'bzip2 -9f', SUFFIX => 'bz2', },
-    clean               => { FILES => 'File-Unpack-*' },
+    clean               => { FILES => ['file_unpack', 'File-Unpack-*' ] },
+    EXE_FILES => [ 'file_unpack' ],
 );
+
+sub MY::postamble
+{
+  return q{
+file_unpack: file_unpack.pl Makefile
+	$(CP) $< $@
+	## wait, so that -M < -M succeeds in ExtUtils/Command/MM.pm
+	(sleep 1; echo .nf; $(PERL) $@ --help) > $(INST_MAN1DIR)/$@.1 || true
+};
+}
+

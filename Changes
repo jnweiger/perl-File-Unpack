@@ -1,5 +1,7 @@
 
-	- input menitoned on 'passed' items.
+	- logfile: input menitoned on 'passed' items.
+	- Makefile.PL now actually installs file_unpack (rt#73670).
+	  Man page is a hack. Sorry.
 
 0.51  	jw, Wed Jan 25 20:23:22 CET 2012
         - input archives that do not exist in destdir (because they were unpacked)
