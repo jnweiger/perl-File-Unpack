@@ -30,11 +30,11 @@ my $help;
 my $mime_only;
 my $list_only;
 my $list_perlish;
-my @mime_handler_dirs;
+my @mime_helper_dirs;
 
 my %opt = ( verbose => 1, maxfilesize => '2.6G', one_shot => 0, no_op => 0, world_readable => 0, log_fullpath => 0);
 
-push @mime_handler_dirs, "$FindBin::RealBin/helper" if -d "$FindBin::RealBin/helper";
+push @mime_helper_dirs, "$FindBin::RealBin/helper" if -d "$FindBin::RealBin/helper";
 
 GetOptions(
 	"verbose|v+"   	=> \$opt{verbose},
@@ -54,11 +54,11 @@ GetOptions(
 	"print-helpers|p+" 	=> \$list_perlish,
 	"params|P=s"		=> \%{$opt{log_params}},
 	"maxfilesize=s"		=> \$opt{maxfilesize},
-	"use-mime-handler-dir|I|u=s" => \@mime_handler_dirs,
+	"use-mime-helper-dir|I|u=s" => \@mime_helper_dirs,
 	"world-readable|world_readable|R+" => \$opt{world_readable},
 ) or $help++;
 
-@mime_handler_dirs = split(/,/,join(',',@mime_handler_dirs));
+@mime_helper_dirs = split(/,/,join(',',@mime_helper_dirs));
 my $archive = shift or $list_perlish or $list_only or $help++;
 
 pod2usage(-verbose => 1, -msg => qq{
@@ -104,10 +104,10 @@ Valid options are:
 	The format of the logfile is JSON; default is STDOUT.
  
  -l --list-helpers
-        Overview of mime-type patterns and their handler commands.
+        Overview of mime-type patterns and their helper commands.
 
  -p --print-helpers
- 	List all builtin mime-handlers and all external mime-helpers as 
+ 	List all builtin mime-helpers and all external mime-helpers as 
 	a nested perl datastructure.
 
  -P --param KEY=VALUE
@@ -129,15 +129,15 @@ Valid options are:
  -n --no-op
  	Do not unpack. Print the first unpack command only.
 
- -u --use-mime-handler-dir dir
- 	Include an additonal directory of mime handlers.
+ -u --use-mime-helper-dir dir
+ 	Include an additonal directory of mime helpers.
 	Useable multiple times. Later additions take precedence.
 
 }) if $help;
 
 $opt{logfile} ||= '/dev/null' if $list_only or $list_perlish or $mime_only or $opt{no_op};
 my $u = File::Unpack->new(%opt);
-my $list = $u->mime_handler_dir(@mime_handler_dirs);
+my $list = $u->mime_helper_dir(@mime_helper_dirs);
 
 if ($list_perlish)
   {
@@ -157,7 +157,7 @@ if ($mime_only)
     while (defined $archive)
       {
 	my $m = $u->mime($archive);
-	my ($h,$r) = $u->find_mime_handler($m);
+	my ($h,$r) = $u->find_mime_helper($m);
 	if ($opt{verbose} > 1)
 	  {
 	    print "$archive: ", Dumper $m;
@@ -176,14 +176,25 @@ if ($mime_only)
     exit 0;
   }
 
-$u->exclude(vcs => $exclude_vcs);
-$u->exclude(add => \@exclude) if @exclude;
 while (defined $archive and !$u->{error}) 
   {
+    $u->exclude(vcs => $exclude_vcs);
+    $u->exclude(add => \@exclude) if @exclude;
+
     $u->unpack($archive);
     map { print STDERR "ERROR: $_\n" } @{$u->{error}} if $u->{error};
     $archive = shift;
-    die "FIXME: File::Unpack currently does not support multiple archives in one go.\n" if defined $archive;
+    if (defined($archive))
+      {
+        if (defined $opt{logfile} and -f $opt{logfile})
+	  {
+            warn "File::Unpack($archive): overwriting previous logfile $opt{logfile} in 3 seconds. Press CTRL-C to abort.\n" if defined $archive;
+	    sleep(3);
+	  }
+        # reload, for the next round. (new() opens the logfile, unpack() closese it.)
+        $u = File::Unpack->new(%opt);
+        $u->mime_helper_dir(@mime_helper_dirs);
+      }
   }
 
 # delete $u->{json};

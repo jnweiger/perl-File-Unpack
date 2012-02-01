@@ -15,7 +15,10 @@ if ($@)
   }
 else
   {
-    ok_manifest({filter => [ qr/\.(svn|git)/, qr/\.(sw.|files|orig|bak|old|tmp|tar\.bz2)$/]});
+    ok_manifest({filter => [ qr{/\.(svn|git)\b}, 
+	qr/\.(sw.|files|orig|bak|old|tmp|tar\.bz2)$/,
+    	qr{/file_unpack$}
+      ]});
   }
 
 # done_testing does not exist on 11.1

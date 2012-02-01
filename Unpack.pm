@@ -61,13 +61,13 @@ BEGIN
 
 use Carp;
 use File::Path;
-use File::Temp ();		# tempdir() in _run_mime_handler.
+use File::Temp ();		# tempdir() in _run_mime_helper.
 use File::Copy ();
 use File::Compare ();
 use JSON;
 use String::ShellQuote;		# used in _prep_configdir 
 use IPC::Run;			# implements File::Unpack::run()
-use Text::Sprintf::Named;	# used to parse @builtin_mime_handlers
+use Text::Sprintf::Named;	# used to parse @builtin_mime_helpers
 use Cwd 'getcwd';		# run(), moves us there and back. 
 use Data::Dumper;
 use POSIX ();
@@ -78,10 +78,10 @@ File::Unpack - A strong bz2/gz/zip/tar/cpio/rpm/deb/cab/lzma/7z/rar/... archive 
 
 =head1 VERSION
 
-Version 0.51
+Version 0.52
 =cut
 
-our $VERSION = '0.51';
+our $VERSION = '0.52';
 
 POSIX::setlocale(&POSIX::LC_ALL, 'C');
 $ENV{PATH} = '/usr/bin:/bin';
@@ -108,7 +108,7 @@ sub _default_helper_dir { $ENV{FILE_UNPACK_HELPER_DIR}||'/usr/share/File-Unpack/
 
 # we use '=' in the mime_name, this expands to '/(x\-|ANY\+)?'
 
-my @builtin_mime_handlers = (
+my @builtin_mime_helpers = (
   # mimetype pattern          # suffix_re           # command with redirects, as defined with IPC::Run::run
 
   # Requires: xz bzip2 gzip unzip
@@ -224,7 +224,7 @@ plugins can be added to support additinal formats.
     print "$m->[0]; charset=$m->[1]\n";
     # text/x-shellscript; charset=us-ascii
 
-    map { print "$_->{name}\n" } @{$u->mime_handler()};
+    map { print "$_->{name}\n" } @{$u->mime_helper()};
     # application/%rpm
     # application/%tar+gzip
     # application/%tar+bzip2
@@ -288,7 +288,7 @@ Otherwise 0700 and 0400 (user readable) is asserted.
 
 exclude(add => ['.svn', '*.orig' ], del => '.svn', force => 1)
 
-Defines the exclude-list for unpacking. This list is advisory for the mime-handlers. 
+Defines the exclude-list for unpacking. This list is advisory for the mime-helpers. 
 The exclude-list items are shell glob patterns, where '*' or '?' never match '/'.
 
 You can use force to have any of these removed after unpacking.
@@ -512,7 +512,7 @@ sub new
   $obj{destdir} = Cwd::fast_abs_path($obj{destdir});
   $obj{destdir} =~ s{(.)/+$}{$1}; #  assert no trailing '/'.
 
-  # used in unpack() to jail mime_handlers deep inside destdir:
+  # used in unpack() to jail mime_helpers deep inside destdir:
   $obj{dot_dot_safeguard} = 20 unless defined $obj{dot_dot_safeguard};
   $obj{jail_chmod0} ||= 0;
   # used in unpack, print only:
@@ -574,12 +574,12 @@ sub new
 
   $self = bless \%obj, $class;
 
-  for my $h (@builtin_mime_handlers)
+  for my $h (@builtin_mime_helpers)
     {
-      $self->mime_handler(@$h);
+      $self->mime_helper(@$h);
     }
   $obj{helper_dir} = _default_helper_dir unless exists $obj{helper_dir};
-  $self->mime_handler_dir($obj{helper_dir}) if defined $obj{helper_dir} and -d $obj{helper_dir};
+  $self->mime_helper_dir($obj{helper_dir}) if defined $obj{helper_dir} and -d $obj{helper_dir};
 
   unless ($ENV{PERL5LIB})
     {
@@ -645,14 +645,14 @@ Unpack achieves this by writing suitable prolog and epilog lines to the logfile.
 The logfile can also be parsed line by line. All file records is one line and start 
 with a ' ' whitespace, and end in a ',' comma. Everything else is prolog or epilog.
 
-The actual unpacking is dispatched to mime-type specfic handlers,
-selected using C<mime>. A mime-handler can either be built-in code, or an
+The actual unpacking is dispatched to mime-type specfic helpers,
+selected using C<mime>. A mime-helper can either be built-in code, or an
 external program (or shell-script) found in a directory registered with
-C<mime_handler_dir>. The standard place for external handlers is
+C<mime_helper_dir>. The standard place for external helpers is
 F</usr/share/File-Unpack/helper>; it can be changed by the environment variable
 F<FILE_UNPACK_HELPER_DIR> or the C<new> parameter C<helper_dir>.
 
-A mime-handler is called with 6 parameters:
+A mime-helper is called with 6 parameters:
 source_path, destfile, destination_path, mimetype, description, and config_dir. 
 Note, that destination_path is a freshly created empty working directory, even
 if the unpacker is expected to unpack only a single file. The unpacker is
@@ -660,21 +660,21 @@ called after chdir into destination_path, so you usually do not need to
 evaluate the third parameter.
 
 The directory C<config_dir> contains unpack configuration in .sh, .js and possibly 
-other formats. A mime-handler may use this information, but need not.  
+other formats. A mime-helper may use this information, but need not.  
 All data passed into C<new> is reflected there, as well as the active exclude-list.
-Using the config information can help a mime-handler to skip unwanted
+Using the config information can help a mime-helper to skip unwanted
 work or otherwise optimize unpacking.
 
 C<unpack> monitors the available filesystem space in destdir. If there is less space
 than configured with C<minfree>, a warning can be printed and unpacking is
-optionally paused. It also monitors the mime-handlers progress reading the archive 
+optionally paused. It also monitors the mime-helpers progress reading the archive 
 at source_path and reports percentages to STDERR (if verbose is 1 or more).
 
-After the mime-handler is finished, C<unpack> examines the files it created.
+After the mime-helper is finished, C<unpack> examines the files it created.
 If it created no files in F<destdir>, an error is reported, and the
 F<source_path> may be passed to other unpackers, or finally be added to the log as is.
 
-If the mime-handler wants to express that F<source_path> is already unpacked as far as possible
+If the mime-helper wants to express that F<source_path> is already unpacked as far as possible
 and should be added to the log without any error messages, it creates a symbolic link 
 F<destdir> pointing to F<source_path>.
 
@@ -703,9 +703,9 @@ The file must not already exist in the parent directory.
 C<unpack> prepares 20 empty subdirectory levels and chdirs the unpacker 
 in there. This number can be adjusted using C<< new(dot_dot_safeguard => 20) >>.
 A directory 20 levels up from the current working dir has mode 0 while 
-the mime-handler runs. C<unpack> can optionally chmod(0) the parent of the subdirectory 
+the mime-helper runs. C<unpack> can optionally chmod(0) the parent of the subdirectory 
 after it chdirs the unpacker inside. Use C<< new(jail_chmod0 => 1) >> for this, default 
-is off. If enabled, a mime-handler trying to place files outside of the specified
+is off. If enabled, a mime-helper trying to place files outside of the specified
 destination_path may receive 'permission denied' conditions. 
 
 These are special hacks to keep badly constructed 
@@ -714,12 +714,12 @@ tar-balls, cpio-, or zip-archives at bay.
 Please note, that this can help against archives containing relative paths 
 (like starting with '../../../foo'), but will be ineffective with absolute paths 
 (starting with '/foo').
-It is the responsibility of mime-handlers to not create absolute paths;
+It is the responsibility of mime-helpers to not create absolute paths;
 C<unpack> should not be run as the root user, to minimize the risk of
 compromising the root filesystem.
 
-A missing mime-handler is skipped, and subsequent handlers may take effect. A
-mime-handler is expected to return an exit status of 0 upon success. If it runs
+A missing mime-helper is skipped, and subsequent helpers may take effect. A
+mime-helper is expected to return an exit status of 0 upon success. If it runs
 into a problem, it should print lines
 starting with the affected filenames to stderr.
 Such errors are recorded in the log with the unpacked archive, and as far as
@@ -852,7 +852,7 @@ sub unpack
           $self->_chmod_add($archive, @{$self->{readable_file_modes}});
 
 	  my $m = $self->mime($archive);
-	  my ($h, $more) = $self->find_mime_handler($m);
+	  my ($h, $more) = $self->find_mime_helper($m);
 	  my $data = { mime => $m->[0] };
 	  if ($more)
 	    {
@@ -911,7 +911,7 @@ sub unpack
 	      #     $self->logf($archive => { unpacking => $h->{fmt_p} });
 	      #   }
 	        
-	      my $unpacked = $self->_run_mime_handler($h, $archive, $new_name, $destdir, 
+	      my $unpacked = $self->_run_mime_helper($h, $archive, $new_name, $destdir, 
 	      				$m->[0], $m->[2], $self->{configdir});
 
 	      return 0 if $self->{no_op};
@@ -955,7 +955,7 @@ sub unpack
 		}
 	      else
 		{
-		  # normal case: mime handler placed all 
+		  # normal case: mime helper placed all 
 		  # in a directory called $unpacked
 
 		  if ($archive =~ m{^\Q$self->{destdir}\E})
@@ -974,7 +974,7 @@ sub unpack
 		  if ($self->{one_shot})
 		    {
 		      local $self->{mime_orcish};
-		      local $self->{mime_handler};
+		      local $self->{mime_helper};
 
 		      $self->unpack($unpacked, $newdestdir);
 		    }
@@ -1153,7 +1153,7 @@ sub run
 
 File::Unpack::fmt_run_shellcmd( $m->{argvv} )
 
-Static function to pretty print the return value $m of method find_mime_handler();
+Static function to pretty print the return value $m of method find_mime_helper();
 It formats a command array used with run() as a properly escaped shell command string.
 
 =cut 
@@ -1200,12 +1200,12 @@ sub fmt_run_shellcmd
 #  {"cmd":"/usr/bin/unzip -P no_pw -q -o '%(src)s'",
 #   "unpacked":"/tmp/xxxx/cups-1.2.4-11.5.1.el5/cups-1.2.4/_Knw_"}
 # Two issues: 
-#   a) _run_mime_handler in /tmp/xxxx/cups-1.2.4-11.5.1.el5/cups-1.2.4
+#   a) _run_mime_helper in /tmp/xxxx/cups-1.2.4-11.5.1.el5/cups-1.2.4
 #      should be /tmp/xxxx/cups-1.2.4-11.5.1.el5/cups-1.2.4/scripting/java
 #   b) _Knw_ should never appear in the end result ...
 #
 
-sub _run_mime_handler
+sub _run_mime_helper
 {
   my ($self, $h, @argv) = @_;
 
@@ -1263,7 +1263,7 @@ sub _run_mime_handler
       return undef;
     }
 
-  print STDERR "_run_mime_handler in $destdir: " . fmt_run_shellcmd(@cmd) . "\n" if $self->{verbose} > 1;
+  print STDERR "_run_mime_helper in $destdir: " . fmt_run_shellcmd(@cmd) . "\n" if $self->{verbose} > 1;
 
   my $cwd = getcwd() or carp "cannot fetch initial working directory, getcwd: $!";
   $cwd = $1 if $cwd =~ m{^(.*)$}s;	#  brute force untaint. Whereever you go, there you are.
@@ -1278,7 +1278,7 @@ sub _run_mime_handler
   my @r = $self->run(@cmd, 
     { 
       debug => ($self->{verbose} > 2) ? $self->{verbose} - 2 : 0, 
-      watch => $args->{src}, every => 5, fu_obj => $self, mime_handler => $h, 
+      watch => $args->{src}, every => 5, fu_obj => $self, mime_helper => $h, 
       prog => sub 
 {
   $_[1]{tick}++; 
@@ -1325,13 +1325,13 @@ sub _run_mime_handler
 
   # TODO: handle failure
   # - remove all, 
-  # - retry with a fallback handler , if any.
+  # - retry with a fallback helper , if any.
   print STDERR "Non-Zero return value: $r[0]\n" if $nonzero[0];
 
-  # FIXME: fallback handler not implemented
+  # FIXME: fallback helper not implemented
   # t/data/pdftxt-a.txt is really plain/text altthough it begins with "PDF-1.4..." and
   # thus fools the mime-type tests.
-  # should run other handlers, and finally 'strings -' as a trivial fallback.
+  # should run other helpers, and finally 'strings -' as a trivial fallback.
   return { error => "run() returned nonzero:\n " . Dumper \@r } if $nonzero[0];
 
   # loop through all _: if it only contains one item , replace it with this item,
@@ -1583,16 +1583,16 @@ sub _prep_configdir
 }
 
 
-=head2 mime_handler_dir mime_handler
+=head2 mime_helper_dir mime_helper
 
-$u->mime_handler_dir($dir, ...)
-$u->mime_handler($mime_name, $suffix_regexp, \@argv, @redir, ...)
+$u->mime_helper_dir($dir, ...)
+$u->mime_helper($mime_name, $suffix_regexp, \@argv, @redir, ...)
 
 Registers one or more directories where external mime-helper programs are found.
-The words helper and handler are used as synonyms here, helpers often refer to
-external programs, where handlers refer to builtin shell commands. 
+Helpers plugins are shellscripts that server as specialized mime-type handlers for unpacking.
+A list of helpers comes builtin interfacing most well-known archivers. This list can be appended to using the mime_helper_dir() or mime_helper() methods.
 Multiple directories can be registered, They are searched in reverse order, i.e. 
-last added takes precedence. Any external mime-handler takes precedence over built-in code.
+last added takes precedence. Any external mime-helper takes precedence over built-in code.
 
 The suffix_regexp is used to derive the destination name from the source name.
 It is not used for selecting helpers.
@@ -1604,7 +1604,7 @@ implicit '=ANY+' if needed.
 
  Examples:
 
-  Mimetype                   handler names tried from top to bottom
+  Mimetype                   helper names tried from top to bottom
   -----------------------------------------------------------------
   image/png                  image=png 
                               image=ANY 
@@ -1640,16 +1640,16 @@ A wildcard before the '=' sign lowers precedence more than one after it.
 
 =back
 
-The mapping takes place when C<mime_handler_dir> is called. Adding helper scripts to a directory
-afterwards has no effect. C<mime_handler> does not do any implicit expansions. Call it
-multiple times with the same handler command and different names if needed.
+The mapping takes place when C<mime_helper_dir> is called. Adding helper scripts to a directory
+afterwards has no effect. C<mime_helper> does not do any implicit expansions. Call it
+multiple times with the same helper command and different names if needed.
 The default argument list is "%(src)s %(destfile)s %(destdir)s %(mime)s %(descr)s %(configdir)s" --
-this is applied, if no args are given and no redirections are given. See also C<unpack> for more semantics and how a handler should behave.
+this is applied, if no args are given and no redirections are given. See also C<unpack> for more semantics and how a helper should behave.
 
-Both methods return an ARRAY-ref of HASHes describing all known (old and newly added) mime handlers.
+Both methods return an ARRAY-ref of HASHes describing all known (old and newly added) mime helpers.
 
 =cut 
-my @def_mime_handler_fmt = qw(%(src)s %(destfile)s %(destdir)s %(mime)s %(descr)s %(configdir)s);
+my @def_mime_helper_fmt = qw(%(src)s %(destfile)s %(destdir)s %(mime)s %(descr)s %(configdir)s);
 
 sub _subst_args
 {
@@ -1657,20 +1657,20 @@ sub _subst_args
   return $f->format({args => $_[1]});
 }
 
-sub mime_handler
+sub mime_helper
 {
   my ($self, $name, $suffix_re, @args) = @_;
   @args = ($name) unless @args;
   @args = ([@args]) unless ref $args[0];
-  push @{$args[0]}, @def_mime_handler_fmt unless $#{$args[0]} or defined $args[1];
+  push @{$args[0]}, @def_mime_helper_fmt unless $#{$args[0]} or defined $args[1];
 
   # cut away the path prefix from name. And use / instead of = in the mime name.
   $name =~ s{(.*/)?(.*?)=(.*?)$}{$2=$3};
 
   unless ($name =~ m{[/=]})
     {
-      print STDERR "mime_handler '$name' needs a '=' or '/'.\n" if $self->{verbose};
-      return $self->{mime_handler};
+      print STDERR "mime_helper '$name' needs a '=' or '/'.\n" if $self->{verbose};
+      return $self->{mime_helper};
     }
 
   my $pat = "^\Q$name\E\$";
@@ -1679,20 +1679,20 @@ sub mime_handler
   $pat =~ s{^\^ANY}{};
   $pat =~ s{ANY\$$}{};
   $pat =~ s{ANY}{\\b\[\^\/\]+\\b}g;
-  unshift @{$self->{mime_handler}}, 
+  unshift @{$self->{mime_helper}}, 
     { 
       name => $name, pat => $pat, suffix_re => $suffix_re, 
       fmt_p => fmt_run_shellcmd(@args), argvv => \@args
     };
 
-  delete $self->{mime_orcish};	# to be rebuilt in find_mime_handler()
+  delete $self->{mime_orcish};	# to be rebuilt in find_mime_helper()
 
-  return $self->{mime_handler};
+  return $self->{mime_helper};
 }
 
 =head2 list
 
-Returns an ARRAY of preformatted patterns and mime-handlers.
+Returns an ARRAY of preformatted patterns and mime-helpers.
 
 Example:
 
@@ -1705,20 +1705,20 @@ sub list
   my ($self) = @_;
 
   my $width = 10;
-  for my $m (@{$self->{mime_handler}})
+  for my $m (@{$self->{mime_helper}})
     {
       $width = length($m->{pat}) if length($m->{pat}) > $width;
     }
 
   my @r;
-  for my $m (@{$self->{mime_handler}})
+  for my $m (@{$self->{mime_helper}})
     {
       push @r, [ "%-${width}s %s\n", $m->{pat}, $m->{fmt_p} ];
     }
   return @r;
 }
 
-sub mime_handler_dir
+sub mime_helper_dir
 {
   my ($self, @dirs) = @_;
 
@@ -1745,7 +1745,7 @@ sub mime_handler_dir
 	    }
 	}
 
-# not needed, this is implicit in mime_handler()/$pat
+# not needed, this is implicit in mime_helper()/$pat
 #
 #      # add expansion of = to =ANY+, if missing
 #      for my $h (keys %h)
@@ -1780,23 +1780,23 @@ sub mime_handler_dir
       for my $h (sort { $h{$b}{p} <=> $h{$a}{p} } keys %h)
         {
 	  # do not ruin the original name by resolving symlinks and such.
-	  $self->mime_handler($h, undef, [Cwd::fast_abs_path($h{$h}{a})]);
+	  $self->mime_helper($h, undef, [Cwd::fast_abs_path($h{$h}{a})]);
 	}
     }
-  return $self->{mime_handler};
+  return $self->{mime_helper};
 }
 
-=head2 find_mime_handler
+=head2 find_mime_helper
 
-$u->find_mime_handler($mimetype)
+$u->find_mime_helper($mimetype)
 
-Returns a mime-handler suitable for unpacking the given $mimetype.
+Returns a mime-helper suitable for unpacking the given $mimetype.
 If called in list context, a second return value indicates which 
-mime handlers whould be suitable, but could not be found in the system.
+mime helpers whould be suitable, but could not be found in the system.
 
 =cut
 
-sub find_mime_handler
+sub find_mime_helper
 {
   my ($self, $mimetype) = @_;
   $mimetype = $mimetype->[0] if ref $mimetype eq 'ARRAY';
@@ -1806,7 +1806,7 @@ sub find_mime_handler
             -f $self->{mime_orcish}{$mimetype}{argvv}[0][0];
   
   my $r = undef;
-  for my $h (@{$self->{mime_handler}})
+  for my $h (@{$self->{mime_helper}})
     {
       if ($mimetype =~ m{$h->{pat}})
         {
@@ -2006,9 +2006,9 @@ excellent reliability in the critical field of mime-type recognition.
 This implementation also features multi-level mime-type recognition for efficient unpacking.
 When e.g. unpacking a large bzipped tar archive, this saves us from creating a
 huge temporary tar-file which C<unpack> would extract in a second step.  The multi-level recognition
-returns 'application/x-tar+bzip2' in this case, and allows for a mime-handler
+returns 'application/x-tar+bzip2' in this case, and allows for a mime-helper
 to e.g. pipe the bzip2 contents into tar (which is exactly what 'tar jxvf'
-does, making a very simple and efficient mime-handler).
+does, making a very simple and efficient mime-helper).
 
 C<mime> returns a 3 or 4 element arrayref with mimetype, charset, description, diff;
 where diff is only present when the libfile and shared-mime-info methods disagree.
@@ -2335,7 +2335,7 @@ The implementation of C<mime> is an ugly hack. We suffer from the existance of
 multiple file magic databases, and multiple conflicting implementations. With
 perl we have at least 5 modules for this; here we use two.
 
-The builtin list of mime-handlers is incomplete. Please submit your handler code.
+The builtin list of mime-helpers is incomplete. Please submit your handler code.
 
 Please report any bugs or feature requests to C<bug-file-unpack at rt.cpan.org>, or through
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=File-Unpack>.  I will be notified, and then you'll
@@ -2372,7 +2372,7 @@ database from freedesktop.org .  Recommended if you use C<mime>.
 
 =item String::ShellQuote 
 
-Used to call external mime-handlers. Required.
+Used to call external mime-helpers. Required.
 
 =item BSD::Resource
 

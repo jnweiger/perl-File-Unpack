@@ -1,7 +1,9 @@
-
+0.52	jw, Wed Feb  1 00:35:47 UTC 2012
 	- logfile: input menitoned on 'passed' items.
 	- Makefile.PL now actually installs file_unpack (rt#73670).
 	  Man page is a hack. Sorry.
+	- file_unpack can now unpack multiple archives on the command line.
+	- helper/handler wording now consistently speaks of helpers.
 
 0.51  	jw, Wed Jan 25 20:23:22 CET 2012
         - input archives that do not exist in destdir (because they were unpacked)
