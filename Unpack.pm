@@ -204,13 +204,15 @@ This perl module comes with an executable script:
 
 /usr/bin/file_unpack -h
 
-/usr/bin/file_unpack [-1] [-m] ARCHIVE...
+/usr/bin/file_unpack [-1] [-m] ARCHIVE_FILE ...
 
 
-File::Unpack is an unpacker for archive files. We call
-it strong, because it is not fooled by file suffixes, or multiply wrapped packages.
-It reliably detects mime-types and recursivly descends into each archive found
-until it finally exposes all unpackable payload contents. 
+File::Unpack is an unpacker for archives and files
+(bz2/gz/zip/tar/cpio/iso/rpm/deb/cab/lzma/7z/rar ... pdf/odf) based on
+mime-types.  We call it strong, because it is not fooled by file suffixes, or
+multiply wrapped packages.  It recursivly descends into each archive found
+until it finally exposes all unpackable payload contents.  
+
 A precise logfile can be written, describing mimetypes and unpack actions.
 Most of the known archive file formats are supported. Shell-script-style
 plugins can be added to support additinal formats.
