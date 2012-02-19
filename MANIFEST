@@ -2,6 +2,7 @@ Changes
 MANIFEST
 Makefile.PL
 ignore.txt
+FIXME.txt
 README
 TODO
 Unpack.pm

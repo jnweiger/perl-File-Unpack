@@ -78,10 +78,10 @@ File::Unpack - A strong bz2/gz/zip/tar/cpio/rpm/deb/cab/lzma/7z/rar/... archive 
 
 =head1 VERSION
 
-Version 0.52
+Version 0.53
 =cut
 
-our $VERSION = '0.52';
+our $VERSION = '0.53';
 
 POSIX::setlocale(&POSIX::LC_ALL, 'C');
 $ENV{PATH} = '/usr/bin:/bin';
@@ -240,7 +240,7 @@ plugins can be added to support additinal formats.
 
     ...
 
-C<unpack()> examines the contents of an archive file or directory using an extensive 
+C<unpack> examines the contents of an archive file or directory using an extensive 
 mime-type analysis. The contents is unpacked recursively to the given destination
 directory; a listing of the unpacked files is reported through the built in
 logging facility during unpacking. Most common archive file formats are handled 
@@ -251,7 +251,8 @@ directly; more can easily be added as mime-type helper plugins.
 =head2 new
 
 my $u = new(destdir => '.', logfile => \*STDOUT, maxfilesize => '2G', verbose => 1,
-            world_readable => 0, one_shot => 0, no_op => 0, log_params => {});
+            world_readable => 0, one_shot => 0, no_op => 0, archive_name_as_dir => 0,
+	    log_params => {}, log_type => 'JSON');
 
 Creates an unpacker instance. The parameter C<destdir> must be a writable location; all output 
 files and directories are placed inside this destdir. Subdirectories will be
@@ -285,6 +286,20 @@ This implies one_shot=1.
 
 The parameter C<world_readable> causes unpack() change all directories to 0755, and all files to 444.
 Otherwise 0700 and 0400 (user readable) is asserted.
+
+The parameter C<archive_name_as_dir> causes the unpacker to store all unpacked
+files inside a directory with the same name as their archive. 
+
+The default depends on how many files are unpacked from the archive: If exactly one
+file is unpacked, then no directory is used. E.g. F<foo.tar.gz> would unpack to
+F<foo.tar>. If multiple files are unpacked, and the suffix of the archive can
+be removed with the C<suffix_re> of its C<mime_helper>, then the
+shortened name is used as a directory. E.g. F<foo.tar> would unpack to
+F<foo/*>. Otherwise F<._> is appended to the archive name. E.g. F<foo.tar> would unpack to
+F<foo.tar._/*>. 
+
+In any case, the suffix F<._> or F<._B<NNN>> is used to avoid conflicts with
+already existing names where B<NNN> is a numeric value.
 
 =head2 exclude
 
@@ -432,15 +447,28 @@ sub logf
   $file = $self->loggable_pathname($file);
   if (my $fp = $self->{lfp})
     {
-      $self->log(qq[{ "oops": "logf used before prolog??",\n"unpacked_files":{\n])
-        unless $self->{lfp_printed}; # sysseek($fp, 0, 1); # }}		there is no systell() ...
-      my $str = $json->encode({$file => $hash});
-      $str =~ s{^\{}{}s;
-      $str =~ s{\}$}{}s;
-      my $pre = " ";
-      $pre = ",\n " if $self->{logf_continuation}++;
-      die "logf failed to encode newline char: $str\n" if $str =~ m{(?:\n|\r)};
-      $self->log("$pre$str$suff");
+      if ($self->{log_type} eq 'plain')
+        {
+	  $self->log("# oops: logf used before prolog??\n") unless $self->{lfp_printed};
+	  my $str = $file . ' (';
+	  $str .= $hash->{mime} if defined $hash->{mime};
+	  $str .= ')';
+	  $str = "# $str -> " . $hash->{unpacked} if $hash->{unpacked};
+	  $str .= "\n";
+	  $self->log($str);
+	}
+      else
+	{
+	  $self->log(qq[{ "oops": "logf used before prolog??",\n"unpacked_files":{\n])
+	    unless $self->{lfp_printed}; # sysseek($fp, 0, 1); # }}		there is no systell() ...
+	  my $str = $json->encode({$file => $hash});
+	  $str =~ s{^\{}{}s;
+	  $str =~ s{\}$}{}s;
+	  my $pre = " ";
+	  $pre = ",\n " if $self->{logf_continuation}++;
+	  die "logf failed to encode newline char: $str\n" if $str =~ m{(?:\n|\r)};
+	  $self->log("$pre$str$suff");
+	}
     }
 }
 
@@ -506,6 +534,8 @@ sub new
   $obj{verbose} = 1 unless defined $obj{verbose};
   $obj{destdir} ||= '.';
   $obj{logfile} ||= \*STDOUT;
+  $obj{log_type} ||= 'json';	# or 'plain'
+  $obj{log_type} = lc $obj{log_type};
   $obj{maxfilesize} = $ENV{'FILE_UNPACK_MAXFILESIZE'}||'2.5G' unless defined $obj{maxfilesize};
   $obj{maxfilesize} = _bytes_unit($obj{maxfilesize});
   $ENV{'FILE_UNPACK_MAXFILESIZE'} = $obj{maxfilesize};	# so that children see the same.
@@ -607,7 +637,14 @@ sub DESTROY
   my $self = shift;
   if ($self->{lfp})
     {
-      $self->log(sprintf(qq[{"pid":"%d", "unpacked":{], $$)) unless $self->{lfp_printed};
+      if ($self->{log_type} eq 'plain')
+        {
+	  # pass
+	}
+      else
+        {
+          $self->log(sprintf(qq[{"pid":"%d", "unpacked":{], $$)) unless $self->{lfp_printed};
+	}
       my $r = $self->{recursion_level}||0;
 
       # this should never happen. 
@@ -615,7 +652,14 @@ sub DESTROY
       ## {{
       my $msg = "unexpected destructor seen";
       $msg = join('; ', @{$self->{error}}) if $self->{error};
-      $self->log(qq[\n}, "error":"(l=$self->{lfp_printed},r=$r): $msg"}\n]);
+      if ($self->{log_type} eq 'plain')
+        {
+          $self->log("# error: (l=$self->{lfp_printed},r=$r): $msg\n");
+	}
+      else
+        {
+          $self->log(qq[\n}, "error":"(l=$self->{lfp_printed},r=$r): $msg"}\n]);
+        }
       close $self->{lfp} if $self->{lfp} ne $self->{logfile};
       delete $self->{lfp};
       delete $self->{lfp_printed};
@@ -633,7 +677,7 @@ $u->unpack($archive, [$destdir])
 
 Determines the contents of an archive and recursivly extracts its files.  
 An archive may be the pathname of a file or directory. The extracted contents will be 
-stored in "destdir/$subdir/$dest_name", where dest_name is the filename
+stored in F<destdir/$subdir/$dest_name>, where dest_name is the filename
 component of archive without any leading pathname components, and possibly
 stripped or added suffix. (Subdir defaults to ''.) If archive is a directory,
 then dest_name will also be a directory. If archive is a file, the type of
@@ -763,18 +807,24 @@ sub unpack
   my $start_time = time;
   if ($self->{recursion_level}++ == 0)
     {
-      $self->{json} ||= JSON->new()->ascii(1);
-
-      $self->{input} = $archive;
+      $self->{json} ||= JSON->new()->ascii(1);	# used often, create it unconditionally here and once.
+      $self->{iput} = $archive;
       $self->{progress_tstamp} = $start_time;
       ($self->{input_dir}, $self->{input_file}) = ($1, $2) if $archive =~ m{^(.*)/([^/]*)$};
 
-      # logfile prolog
-      my $prolog = {destdir=>$self->{destdir}, fu=>$VERSION, pid=>$$, input => $archive, start => scalar localtime};
-      $prolog->{params} = $self->{log_params} if keys %{$self->{log_params}};
-      my $s = $self->{json}->encode($prolog);
-      $s =~ s@}$@, "unpacked":{\n@;
-      $self->log($s);
+      if ($self->{log_type} eq 'plain')
+        {
+	  # pass
+	}
+      else
+	{
+	  # logfile prolog
+	  my $prolog = {destdir=>$self->{destdir}, fu=>$VERSION, pid=>$$, input => $archive, start => scalar localtime};
+	  $prolog->{params} = $self->{log_params} if keys %{$self->{log_params}};
+	  my $s = $self->{json}->encode($prolog);
+	     $s =~ s@}$@, "unpacked":{\n@;
+	  $self->log($s);
+	}
     }
 
   unless (-e $archive)
@@ -888,8 +938,16 @@ sub unpack
 	    }
 	  else
 	    {
+	      if ($self->{archive_name_as_dir})
+	        {
+		  print STDERR "archive_name_as_dir: expanding destdir $destdir\n" if $self->{verbose};
+		  $destdir = _unused_pathname($destdir, $in_file);
+		  print STDERR "archive_name_as_dir: to $destdir\n" if $self->{verbose};
+		}
 	      mkpath($destdir) unless $self->{no_op};
 	      $self->{configdir} = $self->_prep_configdir() unless exists $self->{configdir};
+
+	      ## new_name is a suggestion for the mime_helper only. 
 	      my $new_name = $in_file;
 	      
 	      # Either shorten the name from e.g. foo.txt.bz2 to foo.txt or append 
@@ -906,7 +964,7 @@ sub unpack
 		}
 
 	      ## if consumer of logf wants to do progress indication himself, 
-	      ## then tell him what we do before we start. (Our timer tick code may be analternative...)
+	      ## then tell him what we do before we start. (Our timer tick code may be an alternative...)
 	      #
 	      # if ($archive =~ m{^\Q$self->{destdir}\E})
 	      #   {
@@ -930,6 +988,7 @@ sub unpack
 	        {
 		  # a symlink backwards means, there is nothing to unpack here. take it as is.
 		  unlink $unpacked;
+		  rmdir $destdir if $self->{archive_name_as_dir}; 	# now an empty dir.
 		  $data->{passed} = $h->{name};
 		  $data->{input} = $self->loggable_pathname($archive);
 
@@ -997,18 +1056,26 @@ sub unpack
 
   if (--$self->{recursion_level} == 0)
     {
-      my $epilog = {end => scalar localtime, sec => time-$start_time };
-      $epilog->{skipped} = $self->{skipped} if $self->{skipped};
-      $epilog->{error}   = $self->{error}   if $self->{error};		# just in case some errors were non-fatal.
-      $epilog->{missing_unpacker} = \@missing_unpacker if @missing_unpacker;
-      my $s = $self->{json}->encode($epilog);
+      if ($self->{log_type} eq 'plain')
+        {
+	  for my $m (@missing_unpacker)
+	    {
+	      $self->log("# missing unpacker: $m\n");
+	    }
+	  $self->log("# skipped: $self->{skipped}\n") if $self->{skipped};
+	  $self->log("# error: ".join('; ', @{$self->{error}})."\n") if $self->{error};
+	}
+      else
+	{
+	  my $epilog = {end => scalar localtime, sec => time-$start_time };
+	  $epilog->{skipped} = $self->{skipped} if $self->{skipped};
+	  $epilog->{error}   = $self->{error}   if $self->{error};		# just in case some errors were non-fatal.
+	  $epilog->{missing_unpacker} = \@missing_unpacker if @missing_unpacker;
+	  my $s = $self->{json}->encode($epilog);
 
-      ## No longer needed since 0.40:
-      ## a dummy entry at the end, to compensate for the trailing comma
-      # $s =~ s@^{@"/":{}},@;
-
-      $s =~ s@^{@\n},@;
-      $self->log($s . "\n");
+	  $s =~ s@^{@\n},@;
+	  $self->log($s . "\n");
+	}
 
       if ($self->{lfp} ne $self->{logfile})
         {
@@ -1372,31 +1439,13 @@ sub _run_mime_helper
   ## this message is broken.
   # print STDERR "Hmmm, unpacker did not use destname: $args->{destfile}\n" if $self->{verbose} and !defined $wanted_name;
 
-  # say nothing, if $args->{destname} is equal to or a prefix of $wanted_name.
+  # say nothing, if $args->{destfile} is equal to or a prefix of $wanted_name.
   print STDERR "Hmmm, unpacker saw destname: $args->{destfile}, but used destname: $wanted_name\n" 
-    if $self->{verbose} and defined($wanted_name) and $wanted_name !~ m{^\Q$args->{destfile}};
+    if $self->{verbose} > 1 and defined($wanted_name) and $wanted_name !~ m{^\Q$args->{destfile}};
 
   $wanted_name = $args->{destfile} unless defined $wanted_name;
   my $wanted_path;
-     $wanted_path = $destdir . "/" . $wanted_name if defined $wanted_name;
-
-  if (defined($wanted_name) and -e $wanted_path)
-    {
-      ## try to come up with a very similar name, just different suffix.
-      ## be compatible with path name shortening in unpack()
-      my $test_path = $wanted_path . '._';
-      for my $i ('', 1..9)
-        {
-	  # All our mime detectors work on file contents, rather than on suffixes.
-	  # Thus messing with the suffix should be okay here.
-	  unless (-e $test_path.$i)
-	    {
-              $wanted_path = $test_path.$i;
-	      last;
-	    }
-	}
-    }
-
+     $wanted_path = _unused_pathname($destdir, $wanted_name) if defined $wanted_name;
   my $unpacked = $jail_base;
   if (defined($wanted_name) and !-e $wanted_path)
     {
@@ -1451,6 +1500,32 @@ sub _run_mime_helper
 
   return $unpacked;
 }
+
+sub _unused_pathname
+{
+  my ($destdir, $wanted_name) = @_;
+  my $wanted_path = $destdir . "/" . $wanted_name;
+
+  if (-e $wanted_path)
+    {
+      ## try to come up with a very similar name, just different suffix.
+      ## be compatible with path name shortening in unpack()
+      my $test_path = $wanted_path . '._';
+      for my $i ('', 1..999)
+        {
+	  # All our mime detectors work on file contents, rather than on suffixes.
+	  # Thus messing with the suffix should be okay here.
+	  unless (-e $test_path.$i)
+	    {
+              $wanted_path = $test_path.$i;
+	      last;
+	    }
+	}
+    }
+  die "_unused_pathname failed: last attempt $wanted_path\n" if -e $wanted_path;
+  return $wanted_path;
+}
+
 
 sub _children_fuser
 {

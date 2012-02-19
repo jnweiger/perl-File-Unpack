@@ -2,7 +2,7 @@
 #
 # file_unpack.pl -- Demo of File::Unpack features.
 # 
-# (C) 2010, jnw@cpan.org, all rights reserved.
+# (C) 2010-2012, jnw@cpan.org, all rights reserved.
 # Distribute under the same license as Perl itself.
 #
 # 2010-06-29, jw -- initial draught
@@ -13,6 +13,7 @@
 # 2011-03-08, jw -- fixed usage of -l, added -p.
 # 2011-04-21, jw -- better format error messages, and stop after error.
 # 2011-05-12, jw -- added -n for no_op
+# 2012-02-16, jw -- added -A for archive_name_as_dir
 
 use Data::Dumper;
 $Data::Dumper::Terse = 1;
@@ -32,7 +33,7 @@ my $list_only;
 my $list_perlish;
 my @mime_helper_dirs;
 
-my %opt = ( verbose => 1, maxfilesize => '2.6G', one_shot => 0, no_op => 0, world_readable => 0, log_fullpath => 0);
+my %opt = ( verbose => 1, maxfilesize => '2.6G', one_shot => 0, no_op => 0, world_readable => 0, log_fullpath => 0, archive_name_as_dir => 0);
 
 push @mime_helper_dirs, "$FindBin::RealBin/helper" if -d "$FindBin::RealBin/helper";
 
@@ -54,8 +55,9 @@ GetOptions(
 	"print-helpers|p+" 	=> \$list_perlish,
 	"params|P=s"		=> \%{$opt{log_params}},
 	"maxfilesize=s"		=> \$opt{maxfilesize},
-	"use-mime-helper-dir|I|u=s" => \@mime_helper_dirs,
-	"world-readable|world_readable|R+" => \$opt{world_readable},
+	"use-mime-helper-dir|I|u=s" 		=> \@mime_helper_dirs,
+	"world-readable|world_readable|R+" 	=> \$opt{world_readable},
+	"archive-dirs|archive_dirs|A"		=> \$opt{archive_name_as_dir},
 ) or $help++;
 
 @mime_helper_dirs = split(/,/,join(',',@mime_helper_dirs));
@@ -73,7 +75,11 @@ Valid options are:
  -v	Be more verbose. Default: $opt{verbose}.
  -q     Be quiet, not verbose.
 
- -C 
+ -A --archive_dirs
+ 	Use archive names as directories. Default: no directory for single files,
+	truncated or modified archive names otherwise.
+
+ -C dir
  -D --destdir dir
         Directory, where to place the output file or directory.
 	A subdirectory is created, if there are more than one files to unpack.

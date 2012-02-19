@@ -1,3 +1,7 @@
+0.53	jw, Thu Feb 16 22:26:06 UTC 2012
+	- new parameter -A and new(archive_name_as_dir=>1) added.
+	- new(log_type => 'PLAIN') added, used unless -L
+
 0.52	jw, Wed Feb  1 00:35:47 UTC 2012
 	- logfile: input menitoned on 'passed' items.
 	- Makefile.PL now actually installs file_unpack (rt#73670).
