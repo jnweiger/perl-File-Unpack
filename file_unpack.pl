@@ -13,7 +13,8 @@
 # 2011-03-08, jw -- fixed usage of -l, added -p.
 # 2011-04-21, jw -- better format error messages, and stop after error.
 # 2011-05-12, jw -- added -n for no_op
-# 2012-02-16, jw -- added -A for archive_name_as_dir
+# 2012-02-16, jw -- added -A for archive_name_as_dir.
+#                   using {log_type} == 'PLAIN' unless -L
 
 use Data::Dumper;
 $Data::Dumper::Terse = 1;
@@ -33,7 +34,7 @@ my $list_only;
 my $list_perlish;
 my @mime_helper_dirs;
 
-my %opt = ( verbose => 1, maxfilesize => '2.6G', one_shot => 0, no_op => 0, world_readable => 0, log_fullpath => 0, archive_name_as_dir => 0);
+my %opt = ( verbose => 1, maxfilesize => '2.6G', one_shot => 0, no_op => 0, world_readable => 0, log_fullpath => 0, archive_name_as_dir => 0, log_type => 'PLAIN');
 
 push @mime_helper_dirs, "$FindBin::RealBin/helper" if -d "$FindBin::RealBin/helper";
 
@@ -107,7 +108,8 @@ Valid options are:
  
  -L --logfile  file.log
  	Specify a logfile, where freshly unpacked files are reported.
-	The format of the logfile is JSON; default is STDOUT.
+	When a logfile is specified, its format is JSON; 
+	default is STDOUT with format PLAIN.
  
  -l --list-helpers
         Overview of mime-type patterns and their helper commands.
@@ -140,6 +142,12 @@ Valid options are:
 	Useable multiple times. Later additions take precedence.
 
 }) if $help;
+
+if (defined $opt{logfile})
+  {
+    $opt{log_type} = 'JSON';
+    $opt{logfile} = \*STDOUT if $opt{logfile} eq '-';
+  }
 
 $opt{logfile} ||= '/dev/null' if $list_only or $list_perlish or $mime_only or $opt{no_op};
 my $u = File::Unpack->new(%opt);
