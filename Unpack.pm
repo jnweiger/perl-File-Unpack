@@ -1062,7 +1062,10 @@ sub unpack
 	    {
 	      $self->log("# missing unpacker: $m\n");
 	    }
-	  $self->log("# skipped: $self->{skipped}\n") if $self->{skipped};
+	  for my $s (sort keys %{$self->{skipped}})
+	    {
+	      $self->log("# skipped: $s: $self->{skipped}{$s}\n");
+	    }
 	  $self->log("# error: ".join('; ', @{$self->{error}})."\n") if $self->{error};
 	}
       else
