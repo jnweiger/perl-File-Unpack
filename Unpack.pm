@@ -317,7 +317,7 @@ having the obvious meaning.
 Otherwise C<exclude> always returns the list as an array ref.
 
 Symbolic links are always excluded.
-If exclude patterns were effective, or if symlinks were encountered during unpack(), the logfile contains an 
+If exclude patterns were effective, or if symlinks, fifos, sockets, ... were encountered during unpack(), the logfile contains an 
 additional 'skipped' keyword with statistics.
 
 =cut
@@ -881,13 +881,19 @@ sub unpack
 	      my $new_destdir = $destdir; $new_destdir .= "/$f" if -d $new_in;
               if (-l $new_in)
                 {
+		  # test -l first, as -f could be also true here...
                   print STDERR "symlink $new_in: skipped\n" if $self->{verbose} > 1;
                   $self->{skipped}{symlink}++;
                 }
-	      else
+              elsif (-f _ or -d _)
                 { 
                   $self->unpack($new_in, $new_destdir);
                 }
+	      else
+	        {
+                  print STDERR "special file $new_in: skipped\n" if $self->{verbose} > 1;
+                  $self->{skipped}{device_node}++;
+		}
               $self->{progress_tstamp} = time;
 	    }
 	}
