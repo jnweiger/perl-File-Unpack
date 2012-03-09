@@ -1,5 +1,6 @@
-	jw, Fri Feb 24 13:07:34 CET 2012
+0.54    jw, Fri Mar  9 17:13:48 CET 2012
         - no longer add special files like fifos, sockets, dev nodes to the logfile.
+	- loggable_pathname adds {srcdir => 'input'} if path is in $self->{input}
 
 0.53	jw, Thu Feb 16 22:26:06 UTC 2012
 	- new parameter -A and new(archive_name_as_dir=>1) added.

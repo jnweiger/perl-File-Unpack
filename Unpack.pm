@@ -78,10 +78,10 @@ File::Unpack - A strong bz2/gz/zip/tar/cpio/rpm/deb/cab/lzma/7z/rar/... archive 
 
 =head1 VERSION
 
-Version 0.53
+Version 0.54
 =cut
 
-our $VERSION = '0.53';
+our $VERSION = '0.54';
 
 POSIX::setlocale(&POSIX::LC_ALL, 'C');
 $ENV{PATH} = '/usr/bin:/bin';
@@ -403,6 +403,8 @@ from the second call onward.
 
 The C<loggable_pathname> shortens a path to be relative to either
 $self->{destdir} or $self->{input} unless $self->{log_fullpath} is true.
+If a hash is provided as a second parameter and the path was found to be relative 
+to $self->{input}, then an entry { 'srcdir' => 'input' } is added to this hash.
 
 =end private
 
@@ -425,7 +427,7 @@ sub log
 
 sub loggable_pathname
 {
-  my ($self, $file) = @_;
+  my ($self, $file, $hash) = @_;
 
   unless ($self->{log_fullpath})
     {
@@ -433,7 +435,13 @@ sub loggable_pathname
       unless ($file =~ s{^\Q$self->{destdir}\E/}{})
         {
 	  # less frequently, archives are logged inside the input dir
-	  $file =~ s{^\Q$self->{input}\E/}{\./input/./} if $self->{input};
+	  if ($self->{input})
+	    {
+	      if ($file =~ s{^\Q$self->{input}\E/}{\./input/./})
+	        {
+		  $hash->{srcdir} = 'input' if ref $hash eq 'HASH';
+		}
+	    }
 	}
     }
   return $file;
@@ -444,7 +452,7 @@ sub logf
   my ($self,$file,$hash,$suff) = @_;
   $suff = "" unless defined $suff;
   my $json = $self->{json} ||= JSON->new()->ascii(1);
-  $file = $self->loggable_pathname($file);
+  $file = $self->loggable_pathname($file, $hash);
   if (my $fp = $self->{lfp})
     {
       if ($self->{log_type} eq 'plain')
@@ -587,7 +595,7 @@ sub new
 	      # if RLIM_INFINITY is seen as an attempt to increase limits, we would fail. Ignore this.
 	      BSD::Resource::setrlimit(RLIMIT_FSIZE, $obj{maxfilesize}, RLIM_INFINITY) or
 	      BSD::Resource::setrlimit(RLIMIT_FSIZE, $obj{maxfilesize}, $obj{maxfilesize}) or
-	      warn "RLIMIT_FSIZE($obj{maxfilesize}), limit=$have failed\n";
+	      warn "RLIMIT_FSIZE($obj{maxfilesize}), limit=($have[0],$have[1]) failed\n";
 	    }
 	};
       if ($@)
