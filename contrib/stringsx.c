@@ -20,6 +20,7 @@
  * find significant speed issues with the perl version.
  *
  * 2011-11-01, jnw@cpan.org
+ * 2012-08-23, jw, no more string termination with \f
  */
 
 #include <stdio.h>
@@ -111,8 +112,8 @@ main(int ac, char **av)
 		  queuelen = 0;
 	          printing = 0;
 		  badcount = 0;
-		  putchar('\f');	// next string.
 		  putchar('\n');	// next string.
+		  // putchar('\f');	// next string.	\f often confuses less.
 		}
 	    }
 	}
