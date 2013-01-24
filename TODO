@@ -1,3 +1,14 @@
+				jw, Thu Jan 24 11:39:37 CET 2013
+
+According to: https://rt.cpan.org/Ticket/Display.html?id=73670#txn-1039064
+With multipart rar archives we extract the same thing multiple times.
+Idea: 
+ * can we check for identical copies in colliding directories and 
+   unify them after unpacking? 
+ * I'd rather take this inefficient approach, as a universal method.
+   Hardcoding rar specific code is not planned.
+
+
 				jw, Wed May  4 11:58:27 CEST 2011
 
 debug 
