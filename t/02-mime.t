@@ -33,6 +33,8 @@ my $sample = 'monotone.info';	# one of the below files, without regexps, for fur
   'columns-snippet.fo' => [qr{^(text/plain|application/xml)$},'us-ascii','XML  document text'],
   'empty.odt' => ['application/vnd.oasis.opendocument.text+zip',qr{^(binary|)$},'Zip archive data, at least v2.0 to extract, mime type application/vnd OpenDocument Text'],
   'ruhyphal.tex' => ['text/plain','iso-8859-1','ISO-8859 English text'],
+  'test.mht' => ['text/plain', 'iso-8859-1', 'multipart/related; start=<op.mhtml.1250319979062.7d507541390148, '],
+
   'test2.tga' => ['image/x-tga',qr{^(binary|)$},'Targa image data - RGB - RLE 32 x 32',['application/octet-stream','image/x-tga']],
   ## actually a 'audio/x-mpegurl'
   'wzbc-2009-06-28-17-00.m3u' => ['text/plain','us-ascii','M3U playlist text'],
@@ -52,8 +54,9 @@ if (-f $shared_mime_info_db)
     my %e = %exp;
     for my $f (@f)
       {
+	delete $e{$f};
 	my $r = $u->mime("$d/$f");
-	diag("test file $f not in \%exp: ", Dumper $r),last unless $exp{$f};
+	diag("\nMissing entry $f:\nPlease add this file to \%exp: $f => ", Dumper $r),next unless $exp{$f};
 	my $ref = ref($exp{$f}[0]||'')||'';
 	if ($ref eq 'Regexp') { cmp_ok($r->[0], '=~', $exp{$f}[0],     "$f: $r->[0]"); }
 	else                  { cmp_ok($r->[0], 'eq', $exp{$f}[0]||'', "$f: $r->[0]"); }
@@ -61,8 +64,6 @@ if (-f $shared_mime_info_db)
 	$ref = ref($exp{$f}[1]||'')||''; my $r1 = $r->[1]||'';
 	if ($ref eq 'Regexp') { cmp_ok($r1, '=~', $exp{$f}[1],     "$f: \t\t\tcharset=$r1"); }
 	else                  { cmp_ok($r1, 'eq', $exp{$f}[1]||'', "$f: \t\t\tcharset=$r1"); }
-
-	delete $e{$f};
       }
     # any remainders?
     diag("no files for \%exp: ", Dumper keys %e) if keys %e;
