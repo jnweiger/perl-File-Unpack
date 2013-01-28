@@ -2533,9 +2533,9 @@ L<http://search.cpan.org/dist/File-Unpack/>
 
 =head1 SOURCE REPOSITORY
 
-L<https://developer.berlios.de/projects/perl-file-unpck>
+L<https://github.com/jnweiger/perl-File-Unpack>
 
-svn co L<https://svn.berlios.de/svnroot/repos/perl-file-unpck/trunk/File-Unpack>
+git clone L<https://github.com/jnweiger/perl-File-Unpack.git> 
 
 
 =head1 ACKNOWLEDGEMENTS
@@ -2547,7 +2547,7 @@ for tcsh too.
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2010,2011 Juergen Weigert.
+Copyright 2010,2011,2012,2013 Juergen Weigert.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
