@@ -1,3 +1,15 @@
+0.55	jw, Fri Jan 25 22:09:04 CET 2013
+	- option --follow-file-symlinks or new(follow_file_symlinks => $yes) added;
+	  where $yes is 0, 1, or 2.
+	  We may want to use '1', if we are e.g. inside a legaldb_unpacked 
+	  tree, where everything is a symlink. This usage is experimental.
+	  A value of '2' is hideous and requires studying perldoc Unpack.pm first.
+	- tracking $self->{inside_archives} added. Also experimental.
+
+0.54    jw, Fri Mar  9 17:13:48 CET 2012
+        - no longer add special files like fifos, sockets, dev nodes to the logfile.
+	- loggable_pathname adds {srcdir => 'input'} if path is in $self->{input}
+
 0.53	jw, Thu Feb 16 22:26:06 UTC 2012
 	- new parameter -A and new(archive_name_as_dir=>1) added.
 	- new(log_type => 'PLAIN') added, used unless -L

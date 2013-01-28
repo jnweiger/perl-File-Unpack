@@ -78,10 +78,10 @@ File::Unpack - A strong bz2/gz/zip/tar/cpio/rpm/deb/cab/lzma/7z/rar/... archive 
 
 =head1 VERSION
 
-Version 0.53
+Version 0.55
 =cut
 
-our $VERSION = '0.53';
+our $VERSION = '0.55';
 
 POSIX::setlocale(&POSIX::LC_ALL, 'C');
 $ENV{PATH} = '/usr/bin:/bin';
@@ -252,6 +252,7 @@ directly; more can easily be added as mime-type helper plugins.
 
 my $u = new(destdir => '.', logfile => \*STDOUT, maxfilesize => '2G', verbose => 1,
             world_readable => 0, one_shot => 0, no_op => 0, archive_name_as_dir => 0,
+	    follow_file_symlinks => 0, 
 	    log_params => {}, log_type => 'JSON');
 
 Creates an unpacker instance. The parameter C<destdir> must be a writable location; all output 
@@ -272,20 +273,31 @@ As part of the epilog, a dummy file named "\" with an empty hash is added to the
 It should be ignored while parsing.
 Per default, the logfile is sent to STDOUT. 
 
-The parameter C<maxfilesize> is a safeguard against compressed sparse files and test-files for archivers. 
-Such files could easily fill up any available disk space when unpacked. Files hitting this limit will 
-be silently truncated.  Check the logfile records or epilog to see if this has happened.
-BSD::Resource is used manipulate RLIMIT_FSIZE.
+The parameter C<maxfilesize> is a safeguard against compressed sparse files and
+test-files for archivers.  Such files could easily fill up any available disk
+space when unpacked. Files hitting this limit will be silently truncated.
+Check the logfile records or epilog to see if this has happened.  BSD::Resource
+is used manipulate RLIMIT_FSIZE.
 
-The parameter C<one_shot> can optionally be set to non-zero, to limit unpacking to one step of unpacking.
-Unpacking of well known compressed archives like e.g. '.tar.bz2' is considered one step only. If uncompressing 
-is considered an extra step depends on the configured mime helpers.
+The parameter C<one_shot> can optionally be set to non-zero, to limit unpacking
+to one step of unpacking.  Unpacking of well known compressed archives like
+e.g. '.tar.bz2' is considered one step only. If uncompressing an archive is
+considered an extra step before unpacking the archive depends on the configured
+mime helpers.
 
-The parameter C<no_op> causes unpack() to only print one shell command to STDOUT and exit.
-This implies one_shot=1.
+The parameter C<no_op> causes unpack() to only print one shell command to
+STDOUT and exit.  This implies one_shot=1.
 
-The parameter C<world_readable> causes unpack() change all directories to 0755, and all files to 444.
-Otherwise 0700 and 0400 (user readable) is asserted.
+The parameter C<world_readable> causes unpack() change all directories to 0755,
+and all files to 444.  Otherwise 0700 and 0400 (user readable) is asserted.
+
+The Parameter C<follow_file_symlinks> causes some or all symlinks to files 
+to be included.
+A value of 1 follows symlinks that exist in the input directory and point to a file.
+This has no effect if the input is an archive file. A value of 2 also follows symlinks 
+that were extracted from archives. CAUTION: This may cause unpack() to visit
+files or archives elsewhere in the local filesystem.
+Directory symlinks are always excluded.
 
 The parameter C<archive_name_as_dir> causes the unpacker to store all unpacked
 files inside a directory with the same name as their archive. 
@@ -303,7 +315,7 @@ already existing names where B<NNN> is a numeric value.
 
 =head2 exclude
 
-exclude(add => ['.svn', '*.orig' ], del => '.svn', force => 1)
+exclude(add => ['.svn', '*.orig' ], del => '.svn', force => 1, follow_file_symlinks => 0)
 
 Defines the exclude-list for unpacking. This list is advisory for the mime-helpers. 
 The exclude-list items are shell glob patterns, where '*' or '?' never match '/'.
@@ -316,9 +328,10 @@ having the obvious meaning.
 (re => 1) returns the active exclude-list as a regexp pattern. 
 Otherwise C<exclude> always returns the list as an array ref.
 
-Symbolic links are always excluded.
-If exclude patterns were effective, or if symlinks were encountered during unpack(), the logfile contains an 
-additional 'skipped' keyword with statistics.
+Some symbolic links are included if {follow_file_symlinks} is nonzero. For details see C<<new()>>.
+
+If exclude patterns were effective, or if symlinks, fifos, sockets, ... were encountered during unpack(), 
+the logfile contains an additional 'skipped' keyword with statistics.
 
 =cut
 
@@ -368,6 +381,7 @@ sub exclude
   push @{$opt{add}}, @vcs if defined $opt{vcs} and $opt{vcs};
   push @{$opt{del}}, @vcs if defined $opt{vcs} and !$opt{vcs};
 
+
   for my $a (@{$opt{add}})
     {
       $self->{exclude}{list}{$a}++ if defined $a;
@@ -388,6 +402,9 @@ sub exclude
       $self->{exclude}{$o} = $opt{$o} if defined $opt{$o};
     }
 
+  $self->{follow_file_symlinks} = $opt{follow_file_symlinks}
+    if defined $opt{follow_file_symlinks};
+
   return $opt{re} ? $self->{exclude}{re} : \@list;
 }
 
@@ -403,6 +420,8 @@ from the second call onward.
 
 The C<loggable_pathname> shortens a path to be relative to either
 $self->{destdir} or $self->{input} unless $self->{log_fullpath} is true.
+If a hash is provided as a second parameter and the path was found to be relative 
+to $self->{input}, then an entry { 'srcdir' => 'input' } is added to this hash.
 
 =end private
 
@@ -425,7 +444,7 @@ sub log
 
 sub loggable_pathname
 {
-  my ($self, $file) = @_;
+  my ($self, $file, $hash) = @_;
 
   unless ($self->{log_fullpath})
     {
@@ -433,7 +452,13 @@ sub loggable_pathname
       unless ($file =~ s{^\Q$self->{destdir}\E/}{})
         {
 	  # less frequently, archives are logged inside the input dir
-	  $file =~ s{^\Q$self->{input}\E/}{\./input/./} if $self->{input};
+	  if ($self->{input})
+	    {
+	      if ($file =~ s{^\Q$self->{input}\E/}{\./input/./})
+	        {
+		  $hash->{srcdir} = 'input' if ref $hash eq 'HASH';
+		}
+	    }
 	}
     }
   return $file;
@@ -444,7 +469,7 @@ sub logf
   my ($self,$file,$hash,$suff) = @_;
   $suff = "" unless defined $suff;
   my $json = $self->{json} ||= JSON->new()->ascii(1);
-  $file = $self->loggable_pathname($file);
+  $file = $self->loggable_pathname($file, $hash);
   if (my $fp = $self->{lfp})
     {
       if ($self->{log_type} eq 'plain')
@@ -552,6 +577,11 @@ sub new
   # used in unpack, blocks recursion after archive unpacking:
   $obj{one_shot} ||= $obj{no_op};
 
+  # With $self->{within_archives} we know the difference between symlinks found in 
+  # the given repository or symlinks that were unpacked from an archive. 
+  # Those from an archive are followed only with follow_file_symlinks == 2.
+  $obj{follow_file_symlinks} ||= 0;
+
   carp "We are running as root: Malicious archives may clobber your filesystem.\n" unless $>;
 
   if (ref $obj{logfile} eq 'SCALAR' or !(ref $obj{logfile}))
@@ -587,7 +617,7 @@ sub new
 	      # if RLIM_INFINITY is seen as an attempt to increase limits, we would fail. Ignore this.
 	      BSD::Resource::setrlimit(RLIMIT_FSIZE, $obj{maxfilesize}, RLIM_INFINITY) or
 	      BSD::Resource::setrlimit(RLIMIT_FSIZE, $obj{maxfilesize}, $obj{maxfilesize}) or
-	      warn "RLIMIT_FSIZE($obj{maxfilesize}), limit=$have failed\n";
+	      warn "RLIMIT_FSIZE($obj{maxfilesize}), limit=($have[0],$have[1]) failed\n";
 	    }
 	};
       if ($@)
@@ -807,6 +837,13 @@ sub unpack
   my $start_time = time;
   if ($self->{recursion_level}++ == 0)
     {
+      print STDERR "unpack: starting...\n" if $self->{verbose} > 1;
+      ## State that needs to be reset when (re)starting goes in here.
+      #
+      # CAUTION: recursion_level decrements again, as we return from unpack()
+      #          how do we assert, that this code only runs at the start, 
+      #          and not once again at the end?
+      $self->{inside_archives} = 0;
       $self->{json} ||= JSON->new()->ascii(1);	# used often, create it unconditionally here and once.
       $self->{iput} = $archive;
       $self->{progress_tstamp} = $start_time;
@@ -879,15 +916,30 @@ sub unpack
 	      ## if $archive is $inside_destdir, then $archive is normally indentical to $destdir.
 	      ## ($inside_destdir means inside $self->{destdir}, actually)
 	      my $new_destdir = $destdir; $new_destdir .= "/$f" if -d $new_in;
-              if (-l $new_in)
+	      my $symlink_to_skip = -l $new_in;
+	      my $dangeous_symlink = $self->{inside_archives} ? 1 : 0;
+	      if ($symlink_to_skip and ($self->{follow_file_symlinks} > $dangeous_symlink))
+	        {
+		  $symlink_to_skip = 0 if -f _;
+		  # directory and dead symlinks we always skip.
+		  # directory symlinks could cause us to recurse out of the current tree.
+		}
+
+              if ($symlink_to_skip)
                 {
+		  # test -l first, as -f could be also true here...
                   print STDERR "symlink $new_in: skipped\n" if $self->{verbose} > 1;
                   $self->{skipped}{symlink}++;
                 }
-	      else
+              elsif (-f _ or -d _)
                 { 
                   $self->unpack($new_in, $new_destdir);
                 }
+	      else
+	        {
+                  print STDERR "special file $new_in: skipped\n" if $self->{verbose} > 1;
+                  $self->{skipped}{device_node}++;
+		}
               $self->{progress_tstamp} = time;
 	    }
 	}
@@ -914,6 +966,7 @@ sub unpack
 
           if ($m->[0] eq 'text/plain' or !$h)
 	    {
+	      # not really an archive. 
 	      unless ($archive =~ m{^\Q$self->{destdir}\E/})
 		{
 		  mkpath($destdir) unless $self->{no_op};
@@ -938,6 +991,7 @@ sub unpack
 	    }
 	  else
 	    {
+	      # really an archive. 
 	      if ($self->{archive_name_as_dir})
 	        {
 		  print STDERR "archive_name_as_dir: expanding destdir $destdir\n" if $self->{verbose};
@@ -1000,7 +1054,8 @@ sub unpack
 		    }
 		  else
 		    {
-		      # if outside, we copy it in, flag it done there, and log it here.
+		      # if the archive itself was outside destdir, 
+		      # we copy it in, flag it done there, and log it here.
 		      if (File::Copy::copy($archive, $unpacked))
 		        {
 		          $self->{done}{$archive} = $unpacked;
@@ -1028,6 +1083,7 @@ sub unpack
 		  $data->{unpacked} = $self->loggable_pathname($unpacked);
 		  $self->logf($archive => $data);
 		  $self->{file_count}++;
+		  $self->{inside_archives}++;
 
 		  my $newdestdir = $unpacked;
 		  $newdestdir =~ s{/+[^/]+}{} unless -d $newdestdir;	        # make sure it is a directory
@@ -1062,7 +1118,10 @@ sub unpack
 	    {
 	      $self->log("# missing unpacker: $m\n");
 	    }
-	  $self->log("# skipped: $self->{skipped}\n") if $self->{skipped};
+	  for my $s (sort keys %{$self->{skipped}})
+	    {
+	      $self->log("# skipped: $s: $self->{skipped}{$s}\n");
+	    }
 	  $self->log("# error: ".join('; ', @{$self->{error}})."\n") if $self->{error};
 	}
       else

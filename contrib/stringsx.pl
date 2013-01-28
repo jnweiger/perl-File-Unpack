@@ -21,6 +21,7 @@
 # find significant speed issues with the perl version.
 #
 # 2011-11-01, jnw@cpan.org
+# 2012-08-23, jw, no more string termination with \f
 
 my $infile = shift;
 unless (defined $infile)
@@ -98,7 +99,8 @@ while (defined($ch = getc($fd)))
       	        $queuebuf = '';
                 $printing = 0;
       	  	$badcount = 0;
-      	  	print "\f\n";		# next string.
+      	  	# print "\n\f";		# next string. \f here confuses less.
+      	  	print "\n";		# next string.
       	      }
           }
       }
