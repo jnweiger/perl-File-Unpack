@@ -1,5 +1,5 @@
 #
-# (C) 2010-2012, jnw@cpan.org, all rights reserved.
+# (C) 2010-2013, jnw@cpan.org, all rights reserved.
 # Distribute under the same license as Perl itself.
 #
 #
@@ -78,10 +78,10 @@ File::Unpack - A strong bz2/gz/zip/tar/cpio/rpm/deb/cab/lzma/7z/rar/... archive 
 
 =head1 VERSION
 
-Version 0.55
+Version 0.56
 =cut
 
-our $VERSION = '0.55';
+our $VERSION = '0.56';
 
 POSIX::setlocale(&POSIX::LC_ALL, 'C');
 $ENV{PATH} = '/usr/bin:/bin';
@@ -582,7 +582,7 @@ sub new
   # Those from an archive are followed only with follow_file_symlinks == 2.
   $obj{follow_file_symlinks} ||= 0;
 
-  carp "We are running as root: Malicious archives may clobber your filesystem.\n" unless $>;
+  warn "WARNING: We are running as root: Malicious archives may clobber your filesystem.\n" if $obj{verbose} and !$>;
 
   if (ref $obj{logfile} eq 'SCALAR' or !(ref $obj{logfile}))
     {
@@ -665,7 +665,8 @@ sub new
 sub DESTROY
 {
   my $self = shift;
-  if ($self->{lfp})
+  # when we unpack() processes an input, it should delete {lfp} afterwards.
+  if ($self->{input} and $self->{lfp})
     {
       if ($self->{log_type} eq 'plain')
         {
@@ -1290,8 +1291,11 @@ sub _my_shell_quote
 {
   my @a = @_;
   my $sub;
-  $sub = '\\&_locate_tar'    if $a[0] eq \&_locate_tar;
-  $sub = '\\&_locate_cpio_i' if $a[0] eq \&_locate_cpio_i;
+  if (@a and defined $a[0])
+    {
+      $sub = '\\&_locate_tar'    if $a[0] eq \&_locate_tar;
+      $sub = '\\&_locate_cpio_i' if $a[0] eq \&_locate_cpio_i;
+    }
 
   if ($sub)
     {
@@ -1454,7 +1458,8 @@ sub _run_mime_helper
   # TODO: handle failure
   # - remove all, 
   # - retry with a fallback helper , if any.
-  print STDERR "Non-Zero return value: $r[0]\n" if $nonzero[0];
+  printf STDERR "Non-Zero return value: $r[0]: %s\n", fmt_run_shellcmd(@cmd)
+    if $nonzero[0] and $self->{verbose};
 
   # FIXME: fallback helper not implemented
   # t/data/pdftxt-a.txt is really plain/text altthough it begins with "PDF-1.4..." and

@@ -20,30 +20,68 @@ closedir DIR;
 my $sample = 'monotone.info';	# one of the below files, without regexps, for further tests.
 %exp = 
 (
+  # Filename => [ mimetype, encoding, ... comments ]
+
   ## 0.22 used to say application/x-lzma, but true binary data. Not even compressed.
-  'lxknf09SCc0.bin' => [ 'application/octet-stream', qr{^(binary|)$} ], 
+  'lxknf09SCc0.bin' => 
+  	[ 'application/octet-stream', qr{^(binary|)$} ], 
+
   ## actually 'application/x-desktop' or 'text/x-desktop'
-  'Desktop.directory' => [ 'text/plain', 'utf-8', 'UTF-8 Unicode text' ],
+  'Desktop.directory' => 
+  	[ 'text/plain', 'utf-8', 'UTF-8 Unicode text' ],
 
   ## text/plain seen on 12.1, was text/x-desktop before
-  'xterm-snippet.desktop' => [qr{^text/(plain|x\-desktop)$},'utf-8','UTF-8 Unicode Pascal program text',['text/x-pascal','application/x-desktop']],
-  'IPA-snippet.pfa' => [ 'text/x-font-type1', qr{^(us-ascii|)$}, 'PostScript Type 1 font text (OmegaSerifIPA 001.000)', [ 'text/plain', 'application/x-font-type1' ] ],
-  'Times-Roman-snippet.afm' => [qr{^(application|text)/x-font-sunos-news$}, 'us-ascii','ASCII font metrics',['text/x-fortran','application/x-font-sunos-news']], 
-  ## actually 'text/x-xslfo'
-  'columns-snippet.fo' => [qr{^(text/plain|application/xml)$},'us-ascii','XML  document text'],
-  'empty.odt' => ['application/vnd.oasis.opendocument.text+zip',qr{^(binary|)$},'Zip archive data, at least v2.0 to extract, mime type application/vnd OpenDocument Text'],
-  'ruhyphal.tex' => ['text/plain','iso-8859-1','ISO-8859 English text'],
-  'test.mht' => ['text/plain', 'iso-8859-1', 'multipart/related; start=<op.mhtml.1250319979062.7d507541390148, '],
+  'xterm-snippet.desktop' => 
+  	[ qr{^text/(plain|x\-desktop)$}, 'utf-8', 
+	 'UTF-8 Unicode Pascal program text', ['text/x-pascal','application/x-desktop']],
 
-  'test2.tga' => ['image/x-tga',qr{^(binary|)$},'Targa image data - RGB - RLE 32 x 32',['application/octet-stream','image/x-tga']],
+  'IPA-snippet.pfa' => 
+  	[ 'text/x-font-type1', qr{^(us-ascii|)$}, 
+	  'PostScript Type 1 font text (OmegaSerifIPA 001.000)', 
+	  [ 'text/plain', 'application/x-font-type1' ] ],
+
+  'Times-Roman-snippet.afm' => 
+  	[ qr{^(application|text)/x-font-sunos-news$}, 
+	  'us-ascii','ASCII font metrics',['text/x-fortran','application/x-font-sunos-news']], 
+
+  ## actually 'text/x-xslfo'
+  'columns-snippet.fo' => 
+  	[ qr{^(text/plain|application/xml)$}, 'us-ascii',
+	  'XML  document text'],
+
+  'empty.odt' => 
+  	[ 'application/vnd.oasis.opendocument.text+zip', qr{^(binary|)$},
+	  'Zip archive data, at least v2.0 to extract, mime type application/vnd OpenDocument Text'],
+
+  'ruhyphal.tex' => 
+  	[ 'text/plain','iso-8859-1', 
+	  'ISO-8859 English text'],
+
+  # File-LibMagic-0.96 at SLE11-SP1 reports text/html, 
+  # File-LibMagic-0.96 at openSUSE-12.2 reports text/plain, 
+  'test.mht' => 
+  	[ qr(^text/(html|plain)$), 'iso-8859-1', 
+	  'multipart/related; start=<op.mhtml.1250319979062.7d507541390148, '],
+
+  'test2.tga' => 
+  	[ 'image/x-tga', qr{^(binary|)$},
+	  'Targa image data - RGB - RLE 32 x 32',
+	  ['application/octet-stream','image/x-tga']],
+
   ## actually a 'audio/x-mpegurl'
-  'wzbc-2009-06-28-17-00.m3u' => ['text/plain','us-ascii','M3U playlist text'],
+  'wzbc-2009-06-28-17-00.m3u' => 
+  	[ 'text/plain', 'us-ascii',
+	  'M3U playlist text'],
 
   ## File::LibMagic says application/octet-stream here:
-  'monotone.info' => ['application/x-text-mixed', 'binary', 'data', ['application/octet-stream','application/x-text-mixed']],
+  'monotone.info' => 
+  	[ 'application/x-text-mixed', 'binary', 
+	  'data', ['application/octet-stream','application/x-text-mixed']],
 
   ## this is actually plain text, but we are fooled by its apparent magic.
-  'pdftex-a.txt' =>  ['application/pdf', 'utf-8', 'PDF document, version 1.4' ]
+  'pdftex-a.txt' =>  
+  	[ 'application/pdf', 'utf-8', 
+	  'PDF document, version 1.4' ]
   #
 );
 plan tests => (-f $shared_mime_info_db ? 2 * keys %exp : 0) + 5;

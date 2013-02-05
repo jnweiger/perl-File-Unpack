@@ -1,3 +1,10 @@
+0.56	jw, Tue Feb  5 18:58:06 CET 2013
+	- guard _my_shell_quote against undef. 
+	- no 'running as root warning' when !{verbose}
+	- Relax testsuite on test.mht
+	- relax DESTROY to not start a logfile, when none is requested.
+	- testsuite really silent now.
+
 0.55	jw, Fri Jan 25 22:09:04 CET 2013
 	- option --follow-file-symlinks or new(follow_file_symlinks => $yes) added;
 	  where $yes is 0, 1, or 2.

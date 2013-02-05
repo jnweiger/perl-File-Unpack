@@ -41,6 +41,6 @@ t/data/xterm-snippet.desktop
 t/data/lxknf09SCc0.bin
 t/data/monotone.info
 t/data/pdftex-a.txt
-# t/data/test.mht
+t/data/test.mht
 
 META.yml                                 Module meta-data (added by MakeMaker)

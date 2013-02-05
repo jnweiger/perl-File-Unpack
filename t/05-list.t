@@ -9,4 +9,4 @@ use Data::Dumper;
 my $u = File::Unpack->new();
 my $s = join '', map { sprintf $_->[0],$_->[1],$_->[2] } $u->list();
 
-ok($s !~ m{CODE\(0x}, "list() != CODE(0x...), expand _my_shell_quote to fix");
+ok($s !~ m{CODE\(0x}s, "list() must not have CODE(0x...), expand _my_shell_quote to fix");

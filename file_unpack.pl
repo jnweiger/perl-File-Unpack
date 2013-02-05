@@ -182,6 +182,13 @@ if ($list_only)
 if ($mime_only)
   {
     $u->{verbose}-- if $u->{verbose};
+    if ($u->{verbose} > 1)
+      {
+        print "using File::LibMagic $File::LibMagic::VERSION\n" if defined $File::LibMagic::VERSION;
+        print "using File::MimeInfo::Magic $File::MimeInfo::Magic::VERSION\n" if defined $File::MimeInfo::Magic::VERSION;
+        print "using File::Unpack $File::Unpack::VERSION\n" if defined $File::Unpack::VERSION;
+      }
+
     while (defined $archive)
       {
 	my $m = $u->mime($archive);
