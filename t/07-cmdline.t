@@ -6,6 +6,7 @@ BEGIN { unshift @INC, "$1/../blib/lib" if $FindBin::Bin =~ m{(.*)} };
 use File::Temp;
 use JSON;
 $ENV{PATH} = "/bin:/usr/bin";
+delete $ENV{ENV};
 
 my $testdir = File::Temp::tempdir("FU_06_XXXXX", TMPDIR => 1, CLEANUP => 1);
 my $cmd1 = "./file_unpack -q -L $testdir.log  -D $testdir t/data";
