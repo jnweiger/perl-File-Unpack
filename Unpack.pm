@@ -78,10 +78,10 @@ File::Unpack - A strong bz2/gz/zip/tar/cpio/rpm/deb/cab/lzma/7z/rar/... archive 
 
 =head1 VERSION
 
-Version 0.56
+Version 0.57
 =cut
 
-our $VERSION = '0.56';
+our $VERSION = '0.57';
 
 POSIX::setlocale(&POSIX::LC_ALL, 'C');
 $ENV{PATH} = '/usr/bin:/bin';
@@ -832,7 +832,24 @@ sub unpack
 
   if ($archive !~ m{^/} or $archive !~ m{^\Q$self->{destdir}\E/})
     {
-      $archive = Cwd::fast_abs_path($archive) if -e $archive;
+      # Cwd::fast_abs_path($archive) not only makes nice absolute paths, but it also expands 
+      # file symlinks. This is a bad idea for two reasons:
+      # *  when we allow {follow_file_symlinks} the link destination gets into the log file, 
+      #    rather than the (expected) link itself. 
+      # * Also, this could easily trigger "path escaped" below .
+      ######
+      if ($self->{follow_file_symlinks} && $archive =~ m{^(.*)/(.*?)$})
+        {
+	  # we solve both issues by doing this:
+	  # chop off the file name; expand the path; re-add the filename.
+	  my ($a_path, $a_file) = ($1,$2);
+          $a_path = Cwd::fast_abs_path($a_path) if -e $a_path;
+	  $archive = $a_path . '/' . $a_file;
+	}
+      else
+        {
+          $archive = Cwd::fast_abs_path($archive) if -e $archive;
+	}
     }
 
   my $start_time = time;
@@ -921,7 +938,7 @@ sub unpack
 	      my $dangeous_symlink = $self->{inside_archives} ? 1 : 0;
 	      if ($symlink_to_skip and ($self->{follow_file_symlinks} > $dangeous_symlink))
 	        {
-		  $symlink_to_skip = 0 if -f _;
+		  $symlink_to_skip = 0 if -f $new_in;
 		  # directory and dead symlinks we always skip.
 		  # directory symlinks could cause us to recurse out of the current tree.
 		}
@@ -932,7 +949,7 @@ sub unpack
                   print STDERR "symlink $new_in: skipped\n" if $self->{verbose} > 1;
                   $self->{skipped}{symlink}++;
                 }
-              elsif (-f _ or -d _)
+              elsif (-f $new_in or -d _)
                 { 
                   $self->unpack($new_in, $new_destdir);
                 }
@@ -1465,7 +1482,12 @@ sub _run_mime_helper
   # t/data/pdftxt-a.txt is really plain/text altthough it begins with "PDF-1.4..." and
   # thus fools the mime-type tests.
   # should run other helpers, and finally 'strings -' as a trivial fallback.
-  return { error => "run() returned nonzero:\n " . Dumper \@r } if $nonzero[0];
+  if ($nonzero[0])
+    {
+      rmtree($jail_base);	# empty or has unusable contents now.
+      ## FIXME: we should at least copy in the original file as is...
+      return { error => "run() returned nonzero:\n " . Dumper \@r };
+    }
 
   # loop through all _: if it only contains one item , replace it with this item,
   # be it a file or dir. This uses $jail_tmp, an unused pathname.

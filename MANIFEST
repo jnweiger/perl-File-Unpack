@@ -28,6 +28,7 @@ t/03-exclude.t
 t/04-subdir.t
 t/05-list.t
 t/06-logfile.t
+t/07-cmdline.t
 
 t/data/Desktop.directory
 t/data/IPA-snippet.pfa

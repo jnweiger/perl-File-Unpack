@@ -1,3 +1,14 @@
+0.57	jw, Thu Feb  7 19:01:36 CET 2013
+	- fixed -f to really allow crawling symlinks.
+	  * the logfile will contain the link name, not the link target.
+	  * it thus preserves the illusion that all is inside the destination tree.
+	- The following command can now be used to recreate the logfile (and retry more unpacking)
+	  in $DIR:
+	  file_unpack -D $DIR -f -L $DIR.unpack.log $DIR
+	- _run_mime_helper(): cleanup $jail_base added when cmd fails to run. 
+	  Helper failure may still may result in missing files.
+	- t/07-cmdline.t added.
+
 0.56	jw, Tue Feb  5 18:58:06 CET 2013
 	- guard _my_shell_quote against undef. 
 	- no 'running as root warning' when !{verbose}
@@ -61,7 +72,7 @@
 	converted log to use syswrite() attempt to catch write errors...
 
 0.43 	jw, Thu May 12 13:22:02 CEST 2011
-	Implemented no_op option in _run_mime_handler().
+	Implemented no_op option in _run_mime_helper().
 
 0.42 	jw, Thu Apr 21 15:56:27 CEST 2011
 	Unexpected DESTROY handler closes json logfile properly with an {error} message, if any.
@@ -143,14 +154,14 @@
 	Added '# Requires: ....' comments with the builtin handlers to document 
 	the non-perlish dependencies. 
 	Fixed recognition of .xls -- File::LibMagic said corrupt, with only a
-	short buffer.  Swapped 2nd and 3rd parameter of _run_mime_handler():
+	short buffer.  Swapped 2nd and 3rd parameter of _run_mime_helper():
 	mime helpers have now their suggested destname as second parameter.
 	mime(): added suffix rules for 'text/plain' and 'application/octet-stream', 
 	to harvest even the least trusted source of information, in the absence
 	of anything else.
 	Implemented first draft of helper/text/=x-shellscript: tested embedded gzip.
 	Added -L option to file_unpack.pl; 
-	_run_mime_handler() now untaints its argv. run() errors are now propagated.
+	_run_mime_helper() now untaints its argv. run() errors are now propagated.
 	t/04-subdir.t now does a real-life unzip test, if unzip is available.
 	Lowered $RECURSION_LIMIT to 200. 1000 takes ages with big files.
 	Call bunzip2 with -f, but don't call xz with -f.
@@ -174,7 +185,7 @@
    	Added helper/text=x-shellscript to demonstrate this.
 	Made external mime-helpers work: registering, calling.
 	Remember absolut path, call mime_type() correctly.
-	Started to propagate errors from _run_mime_handler() to unpack().
+	Started to propagate errors from _run_mime_helper() to unpack().
 	mime(): In SLES11 we get 'text/plain charset=utf-8' without semicolon.
 
 0.20	jw, Tue Aug 24 21:15:49 CEST 2010
@@ -205,28 +216,28 @@
 
 0.14	jw, Thu Aug 12 00:14:00 CEST 2010
 	Using Text::Sprintf::Named for parsing builtin_mime_handlers.
-	Added _fmt_run_shellcmd(). Tested _run_mime_handler. Finished.
+	Added _fmt_run_shellcmd(). Tested _run_mime_helper. Finished.
 
 0.13	jw, Wed Aug 11 10:30:49 CEST 2010
 	regression fixed: application/oasis.*.text no longer had +zip suffix.
 
 0.12	jw, Fri Aug  6 01:38:50 CEST 2010
-	Possibly finalized _run_mime_handler(), needs testing.
+	Possibly finalized _run_mime_helper(), needs testing.
 
 0.11    jw, Tue Aug  3 20:15:04 CEST 2010
 	Reporting @missing_unpacker in log.
 
 0.10	jw, Tue Aug  3 00:30:25 CEST 2010
 	File::Unppack::run() finished. Oops, IPC::Run opens all redirects before init. 
-	Jail construction done in _run_mime_handler(). Jail descruction TBD.
+	Jail construction done in _run_mime_helper(). Jail descruction TBD.
 	@builtin_mime_handlers now reflects the harness structure, knows which
 	suffixes to remove, and uses words in curly braces as templates, to
 	make it less ugly.  Delayed template substitution into
-	_run_mime_handler(), as extra array-refs are no good idea in a harness.
+	_run_mime_helper(), as extra array-refs are no good idea in a harness.
 
 0.09    jw, Sun Aug  1 23:42:19 CEST 2010
 	Added self->{done}, to protect against re-unpacking; enabled recursion in unpack.
-	More consistent use of C<...> in POD. _run_mime_handler() prepared for IPC::Run.
+	More consistent use of C<...> in POD. _run_mime_helper() prepared for IPC::Run.
 	Changed use_mime_handler() to parse an array, rather than a format string.
 
 0.08	jw, Mon Jul 12 00:54:09 CEST 2010
@@ -235,7 +246,7 @@
 	Added builtin handlers to new(), using "%{destdir} ..." format string syntax
 	Added _prep_configdir(), shell and json support.
 	Continued unpack() to dispatch into mime handlers.
-	Started _run_mime_handler()
+	Started _run_mime_helper()
 
 0.07    jw, Fri Jul  9 01:19:19 CEST 2010
 	Added support for stacked compressions recognition without looking 
