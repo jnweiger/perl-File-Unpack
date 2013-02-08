@@ -474,7 +474,6 @@ sub logf
     {
       if ($self->{log_type} eq 'plain')
         {
-	  $self->log("# oops: logf used before prolog??\n") unless $self->{lfp_printed};
 	  my $str = $file . ' (';
 	  $str .= $hash->{mime} if defined $hash->{mime};
 	  $str .= ')';
@@ -1052,8 +1051,10 @@ sub unpack
 		  # a ref here means, something went wrong.
 		  $data->{failed} = $h->{fmt_p};
 		  $data->{error} = $unpacked->{error};
+		  $data->{stderr} = $unpacked->{stderr} if defined $unpacked->{stderr};
 		  $self->logf($archive => $data);
 		  $self->{file_count}++;
+		  $self->{helper_errors}++;
 		}
 	      elsif ($unpacked eq "$destdir/$new_name" and 
 	             readlink($unpacked)||'' eq $archive)
@@ -1147,7 +1148,8 @@ sub unpack
 	{
 	  my $epilog = {end => scalar localtime, sec => time-$start_time };
 	  $epilog->{skipped} = $self->{skipped} if $self->{skipped};
-	  $epilog->{error}   = $self->{error}   if $self->{error};		# just in case some errors were non-fatal.
+	  $epilog->{error}{msg}   = $self->{error}   if $self->{error};		# just in case some errors were non-fatal.
+	  $epilog->{error}{helper}   = $self->{helper_errors}   if $self->{helper_errors}; # counting 
 	  $epilog->{missing_unpacker} = \@missing_unpacker if @missing_unpacker;
 	  my $s = $self->{json}->encode($epilog);
 
@@ -1425,17 +1427,20 @@ sub _run_mime_helper
   # But hey, mkpath() and rmtree() change the cwd so often, and restore it, so why shouldn't we?
 
 
+  my $run_error = undef;	# we capture the first error line for the logfile.
   my @r = $self->run(@cmd, 
-    { 
+    {
       debug => ($self->{verbose} > 2) ? $self->{verbose} - 2 : 0, 
       watch => $args->{src}, every => 5, fu_obj => $self, mime_helper => $h, 
+      err => sub { print "E: @_\n" if $self->{verbose}; $run_error = "@_" unless length $run_error },
       prog => sub 
 {
   $_[1]{tick}++; 
   my $name = $_[1]{watch}; $name =~ s{.*/}{};
   if ($_[1]{finished})
     {
-      printf "T: %s (%s,  done)\n", $name, _unit_bytes(-s $_[1]{watch},1);
+      printf "T: %s (%s,  done)\n", $name, _unit_bytes(-s $_[1]{watch},1) 
+        if $self->{verbose};
     }
   elsif (my $p = _children_fuser($_[1]{watch}, POSIX::getpid()))
     {
@@ -1460,11 +1465,13 @@ sub _run_mime_helper
       $_[1]{fuser} = $p;
       my $off = $p->{fastest_fd}{pos}||0;
       my $tot = $p->{fastest_fd}{size}||(-s $_[1]{watch})||1;
-      printf "T: %s (%s, %.1f%%)\n", $name, _unit_bytes($off,1), ($off*100)/$tot;
+      printf "T: %s (%s, %.1f%%)\n", $name, _unit_bytes($off,1), ($off*100)/$tot
+        if $self->{verbose};
     }
   else
     {
-      print "T: $name tick_tick $_[1]{tick}\n"; 
+      print "T: $name tick_tick $_[1]{tick}\n"
+        if $self->{verbose};
     }
 },
     });
@@ -1487,7 +1494,7 @@ sub _run_mime_helper
     {
       rmtree($jail_base);	# empty or has unusable contents now.
       ## FIXME: we should at least copy in the original file as is...
-      return { error => "run() returned nonzero:\n " . Dumper \@r };
+      return { error => "nonzero retval:\n " . Dumper(\@r), stderr => $run_error };
     }
 
   # loop through all _: if it only contains one item , replace it with this item,
@@ -2620,9 +2627,11 @@ L<http://search.cpan.org/dist/File-Unpack/>
 
 =head1 SOURCE REPOSITORY
 
-L<https://developer.berlios.de/projects/perl-file-unpck>
+L<http://search.cpan.org/search?query=File%3A%3AUnpack>
 
-svn co L<https://svn.berlios.de/svnroot/repos/perl-file-unpck/trunk/File-Unpack>
+L<http://github.com/jnweiger/perl-File-Unpack>
+
+git clone L<https://github.com/jnweiger/perl-File-Unpack.git>
 
 
 =head1 ACKNOWLEDGEMENTS
