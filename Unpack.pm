@@ -78,10 +78,10 @@ File::Unpack - A strong bz2/gz/zip/tar/cpio/rpm/deb/cab/lzma/7z/rar/... archive 
 
 =head1 VERSION
 
-Version 0.57
+Version 0.58
 =cut
 
-our $VERSION = '0.57';
+our $VERSION = '0.58';
 
 POSIX::setlocale(&POSIX::LC_ALL, 'C');
 $ENV{PATH} = '/usr/bin:/bin';
@@ -1118,6 +1118,7 @@ sub unpack
 		      $self->unpack($unpacked, $newdestdir);
 		    }
                   $self->{progress_tstamp} = time;
+		  $self->{inside_archives}--;
 		}
 	    }
 	}

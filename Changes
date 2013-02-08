@@ -1,3 +1,6 @@
+0.58	jw, Fri Feb  8 11:15:33 CET 2013
+	- bugfix: {inside_archives} was not decremented after leaving an archive.
+
 0.57	jw, Thu Feb  7 19:01:36 CET 2013
 	- fixed -f to really allow crawling symlinks.
 	  * the logfile will contain the link name, not the link target.
