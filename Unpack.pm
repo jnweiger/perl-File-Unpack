@@ -209,11 +209,11 @@ This perl module comes with an executable script:
 
 File::Unpack is an unpacker for archives and files
 (bz2/gz/zip/tar/cpio/iso/rpm/deb/cab/lzma/7z/rar ... pdf/odf) based on
-mime-types.  We call it strong, because it is not fooled by file suffixes, or
-multiply wrapped packages.  It recursivly descends into each archive found
-until it finally exposes all unpackable payload contents.  
+MIME types.  We call it strong, because it is not fooled by file suffixes, or
+multiply wrapped packages. It recursively descends into each archive found
+until it finally exposes all unpackable payload contents.
 
-A precise logfile can be written, describing mimetypes and unpack actions.
+A precise logfile can be written, describing MIME types and unpack actions.
 Most of the known archive file formats are supported. Shell-script-style
 plugins can be added to support additinal formats.
 
@@ -291,7 +291,7 @@ STDOUT and exit.  This implies one_shot=1.
 The parameter C<world_readable> causes unpack() change all directories to 0755,
 and all files to 444.  Otherwise 0700 and 0400 (user readable) is asserted.
 
-The Parameter C<follow_file_symlinks> causes some or all symlinks to files 
+The parameter C<follow_file_symlinks> causes some or all symlinks to files 
 to be included.
 A value of 1 follows symlinks that exist in the input directory and point to a file.
 This has no effect if the input is an archive file. A value of 2 also follows symlinks 
@@ -317,7 +317,7 @@ already existing names where B<NNN> is a numeric value.
 
 exclude(add => ['.svn', '*.orig' ], del => '.svn', force => 1, follow_file_symlinks => 0)
 
-Defines the exclude-list for unpacking. This list is advisory for the mime-helpers. 
+Defines the exclude-list for unpacking. This list is advisory for the MIME helpers. 
 The exclude-list items are shell glob patterns, where '*' or '?' never match '/'.
 
 You can use force to have any of these removed after unpacking.
@@ -715,20 +715,21 @@ dest_name depends on the type of packing: If the archive expands to multiple
 files, dest_name will be a directory, otherwise it will be a file. If a file of
 the same name already exists in the destination subdir, an additional subdir
 component is created to avoid any conflicts.
+
 For each extracted file, a record is written to the logfile.
 When unpacking is finished, the logfile contains one valid JSON structure.
 Unpack achieves this by writing suitable prolog and epilog lines to the logfile.
 The logfile can also be parsed line by line. All file records is one line and start 
 with a ' ' whitespace, and end in a ',' comma. Everything else is prolog or epilog.
 
-The actual unpacking is dispatched to mime-type specfic helpers,
-selected using C<mime>. A mime-helper can either be built-in code, or an
+The actual unpacking is dispatched to MIME type specific helpers,
+selected using C<mime>. A MIME helper can either be built-in code, or an
 external program (or shell-script) found in a directory registered with
 C<mime_helper_dir>. The standard place for external helpers is
 F</usr/share/File-Unpack/helper>; it can be changed by the environment variable
 F<FILE_UNPACK_HELPER_DIR> or the C<new> parameter C<helper_dir>.
 
-A mime-helper is called with 6 parameters:
+A MIME helper is called with 6 parameters:
 source_path, destfile, destination_path, mimetype, description, and config_dir. 
 Note, that destination_path is a freshly created empty working directory, even
 if the unpacker is expected to unpack only a single file. The unpacker is
@@ -736,21 +737,21 @@ called after chdir into destination_path, so you usually do not need to
 evaluate the third parameter.
 
 The directory C<config_dir> contains unpack configuration in .sh, .js and possibly 
-other formats. A mime-helper may use this information, but need not.  
+other formats. A MIME helper may use this information, but need not.  
 All data passed into C<new> is reflected there, as well as the active exclude-list.
-Using the config information can help a mime-helper to skip unwanted
+Using the config information can help a MIME helper to skip unwanted
 work or otherwise optimize unpacking.
 
 C<unpack> monitors the available filesystem space in destdir. If there is less space
 than configured with C<minfree>, a warning can be printed and unpacking is
-optionally paused. It also monitors the mime-helpers progress reading the archive 
+optionally paused. It also monitors the MIME helpers progress reading the archive 
 at source_path and reports percentages to STDERR (if verbose is 1 or more).
 
-After the mime-helper is finished, C<unpack> examines the files it created.
+After the MIME helper is finished, C<unpack> examines the files it created.
 If it created no files in F<destdir>, an error is reported, and the
 F<source_path> may be passed to other unpackers, or finally be added to the log as is.
 
-If the mime-helper wants to express that F<source_path> is already unpacked as far as possible
+If the MIME helper wants to express that F<source_path> is already unpacked as far as possible
 and should be added to the log without any error messages, it creates a symbolic link 
 F<destdir> pointing to F<source_path>.
 
@@ -779,9 +780,9 @@ The file must not already exist in the parent directory.
 C<unpack> prepares 20 empty subdirectory levels and chdirs the unpacker 
 in there. This number can be adjusted using C<< new(dot_dot_safeguard => 20) >>.
 A directory 20 levels up from the current working dir has mode 0 while 
-the mime-helper runs. C<unpack> can optionally chmod(0) the parent of the subdirectory 
+the MIME helper runs. C<unpack> can optionally chmod(0) the parent of the subdirectory 
 after it chdirs the unpacker inside. Use C<< new(jail_chmod0 => 1) >> for this, default 
-is off. If enabled, a mime-helper trying to place files outside of the specified
+is off. If enabled, a MIME helper trying to place files outside of the specified
 destination_path may receive 'permission denied' conditions. 
 
 These are special hacks to keep badly constructed 
@@ -790,12 +791,12 @@ tar-balls, cpio-, or zip-archives at bay.
 Please note, that this can help against archives containing relative paths 
 (like starting with '../../../foo'), but will be ineffective with absolute paths 
 (starting with '/foo').
-It is the responsibility of mime-helpers to not create absolute paths;
+It is the responsibility of MIME helpers to not create absolute paths;
 C<unpack> should not be run as the root user, to minimize the risk of
 compromising the root filesystem.
 
-A missing mime-helper is skipped, and subsequent helpers may take effect. A
-mime-helper is expected to return an exit status of 0 upon success. If it runs
+A missing MIME helper is skipped, and subsequent helpers may take effect. A
+MIME helper is expected to return an exit status of 0 upon success. If it runs
 into a problem, it should print lines
 starting with the affected filenames to stderr.
 Such errors are recorded in the log with the unpacked archive, and as far as
@@ -1759,17 +1760,17 @@ sub _prep_configdir
 $u->mime_helper_dir($dir, ...)
 $u->mime_helper($mime_name, $suffix_regexp, \@argv, @redir, ...)
 
-Registers one or more directories where external mime-helper programs are found.
-Helpers plugins are shellscripts that server as specialized mime-type handlers for unpacking.
+Registers one or more directories where external MIME helper programs are found.
+Helpers plugins are shellscripts that server as specialized MIME type handlers for unpacking.
 A list of helpers comes builtin interfacing most well-known archivers. This list can be appended to using the mime_helper_dir() or mime_helper() methods.
 Multiple directories can be registered, They are searched in reverse order, i.e. 
-last added takes precedence. Any external mime-helper takes precedence over built-in code.
+last added takes precedence. Any external MIME helper takes precedence over built-in code.
 
 The suffix_regexp is used to derive the destination name from the source name.
 It is not used for selecting helpers.
 
-Helpers are mapped to mime-types by their mime_name. The name can be constructed
-from the mimetype by replacing the '/' with a '=' character, and by using the
+Helpers are mapped to MIME types by their mime_name. The name can be constructed
+from the MIME type by replacing the '/' with a '=' character, and by using the
 word 'ANY' as a wildcard component. The '=' character is interpreted as an
 implicit '=ANY+' if needed.
 
@@ -1863,7 +1864,7 @@ sub mime_helper
 
 =head2 list
 
-Returns an ARRAY of preformatted patterns and mime-helpers.
+Returns an ARRAY of preformatted patterns and MIME helpers.
 
 Example:
 
@@ -1961,9 +1962,9 @@ sub mime_helper_dir
 
 $u->find_mime_helper($mimetype)
 
-Returns a mime-helper suitable for unpacking the given $mimetype.
+Returns a MIME helper suitable for unpacking the given $mimetype.
 If called in list context, a second return value indicates which 
-mime helpers whould be suitable, but could not be found in the system.
+mime helpers would be suitable, but could not be found in the system.
 
 =cut
 
@@ -2159,8 +2160,8 @@ $u->mime(buf => "#!/bin ...", file => "what-was-read")
 
 $u->mime(fd => \*STDIN, file => "what-was-opened")
 
-Determines the mimetype (and optionally additional information) of a file.
-The file can be specified by filename, by a provided buffer or an opened filedescriptor.
+Determines the MIME type (and optionally additional information) of a file.
+The file can be specified by filename, by a provided buffer or an opened file descriptor.
 For the latter two cases, specifying a filename is optional, and used only for diagnostics.
 
 C<mime> uses libmagic by Christos Zoulas exposed via File::LibMagic and also uses
@@ -2172,14 +2173,14 @@ file, or says 'text/plain', but has contradicting details in its description.
 C<File::MimeInfo::Magic::magic> is consulted where the libmagic output is dubious. E.g. when 
 the desciption says something interesting like 'Debian binary package (format 2.0)' but the 
 mimetype says 'application/octet-stream'. The combination of both libraries gives us 
-excellent reliability in the critical field of mime-type recognition.
+excellent reliability in the critical field of MIME type recognition.
 
-This implementation also features multi-level mime-type recognition for efficient unpacking.
+This implementation also features multi-level MIME type recognition for efficient unpacking.
 When e.g. unpacking a large bzipped tar archive, this saves us from creating a
 huge temporary tar-file which C<unpack> would extract in a second step.  The multi-level recognition
-returns 'application/x-tar+bzip2' in this case, and allows for a mime-helper
+returns 'application/x-tar+bzip2' in this case, and allows for a MIME helper
 to e.g. pipe the bzip2 contents into tar (which is exactly what 'tar jxvf'
-does, making a very simple and efficient mime-helper).
+does, making a very simple and efficient MIME helper).
 
 C<mime> returns a 3 or 4 element arrayref with mimetype, charset, description, diff;
 where diff is only present when the libfile and shared-mime-info methods disagree.
@@ -2191,7 +2192,7 @@ We return 'text/x-suffix-XX+plain', where XX is one of the recognized suffixes
 header and looks like 'plain/text' to all the known magic libraries. We
 recognize the suffixes .mm, .b64, and .base64 for this (case insignificant).
 A similar rule exitst for 'application/octect-stream'. It may trigger e.g. for
-lzma compressed files which fail to provide a magic number.
+LZMA compressed files which fail to provide a magic number.
 
 Examples:
  
@@ -2502,11 +2503,11 @@ Juergen Weigert, C<< <jnw at cpan.org> >>
 
 =head1 BUGS
 
-The implementation of C<mime> is an ugly hack. We suffer from the existance of
+The implementation of C<mime> is an ugly hack. We suffer from the existence of
 multiple file magic databases, and multiple conflicting implementations. With
-perl we have at least 5 modules for this; here we use two.
+Perl we have at least 5 modules for this; here we use two.
 
-The builtin list of mime-helpers is incomplete. Please submit your handler code.
+The builtin list of MIME helpers is incomplete. Please submit your handler code.
 
 Please report any bugs or feature requests to C<bug-file-unpack at rt.cpan.org>, or through
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=File-Unpack>.  I will be notified, and then you'll
@@ -2543,7 +2544,7 @@ database from freedesktop.org .  Recommended if you use C<mime>.
 
 =item String::ShellQuote 
 
-Used to call external mime-helpers. Required.
+Used to call external MIME helpers. Required.
 
 =item BSD::Resource
 
@@ -2585,7 +2586,7 @@ It is pure perl, so it's a lot slower then your '/usr/bin/zip'.
 
 =item Archive::Tar
 
-It is pure perl, so it's a lot slower then your "/bin/tar".
+It is pure Perl, so it's a lot slower then your "/bin/tar".
 It is heavy on memory, all will be read into memory. [quoted from perldoc]
 
 =item File::MMagic, File::MMagic::XS, File::Type
@@ -2636,7 +2637,7 @@ git clone L<https://github.com/jnweiger/perl-File-Unpack.git>
 
 =head1 ACKNOWLEDGEMENTS
 
-Mime-type recognition relies heavily on libmagic by Christos Zoulas. I had long 
+MIME type recognition relies heavily on libmagic by Christos Zoulas. I had long 
 hesitated implementing File::Unpack, but set to work, when I dicovered
 that File::LibMagic brings your library to perl. Thanks Christos. And thanks
 for tcsh too.
