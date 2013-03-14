@@ -1,3 +1,8 @@
+				jw, Thu Mar 14 19:51:33 CET 2013
+
+file_unpack -L logfile.log .
+would list the logfile within itself. Avoid this!
+
 				jw, Thu Jan 24 11:39:37 CET 2013
 
 According to: https://rt.cpan.org/Ticket/Display.html?id=73670#txn-1039064
