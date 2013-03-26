@@ -1,8 +1,9 @@
-
+0.59    jw, Tue Mar 26 22:53:51 CET 2013
+        - helping upx to survive symlinks. "%{lsrc}s" format added.
         - POD fixes from from anirvan/patch-1
         - application/msword helper added. Using antiword.
-	- helper diagnostics improved: first line of stderr is captured in the
-	  log.
+	- helper diagnostics improved: first line of stderr is captured in 
+	  the log.
 	- {verbose} control improved.
 
 0.58	jw, Fri Feb  8 11:15:33 CET 2013

@@ -78,10 +78,10 @@ File::Unpack - A strong bz2/gz/zip/tar/cpio/rpm/deb/cab/lzma/7z/rar/... archive 
 
 =head1 VERSION
 
-Version 0.58
+Version 0.59
 =cut
 
-our $VERSION = '0.58';
+our $VERSION = '0.59';
 
 POSIX::setlocale(&POSIX::LC_ALL, 'C');
 $ENV{PATH} = '/usr/bin:/bin';
@@ -124,7 +124,7 @@ my @builtin_mime_helpers = (
   [ 'text=uuencode',        qr{uu},                [qw(/usr/bin/uudecode -o %(destfile)s %(src)s)] ],
 
   # Requires: upx
-  [ 'application=upx',	   qr{(?:upx\.exe|upx)},   [qw(/usr/bin/upx -q -q -q -d -o%(destfile)s %(src)s) ] ],
+  [ 'application=upx',	   qr{(?:upx\.exe|upx)},   [qw(/usr/bin/upx -q -q -q -d -o%(destfile)s %(lsrc)s) ] ],
 
   # xml.summary.Mono.Security.Authenticode is twice inside of monodoc-1.0.4.tar.gz/Mono.zip/ -> use -o
   [ 'application=zip',        qr{(?:zip|jar|sar)}, [qw(/usr/bin/unzip -P no_pw -q -o %(src)s)] ],
@@ -1383,13 +1383,14 @@ sub _run_mime_helper
 
   my $args = 
     {
-      src	=> $argv[0],	# abs_path()
+      src	=> $argv[0],	# abs_path() - but not symlink resolved, so that the unpacker sees 'our' name
       destfile	=> $argv[1],	# filename() - a suggested name, simply based on src, in case the unpacker needs it.
       destdir	=> $jail,	# abs_path() - for now...
       mime	=> $argv[3],
       descr	=> $argv[4],	# mime_descr
       configdir	=> $argv[5]	# abs_path()
     };
+  $args->{lsrc} = Cwd::realpath($args->{src});	# symlinks resolved; use this with a stupid unpacker like 'upx'
   die "src must be an abs_path." unless $args->{src} =~ m{^/};
   
   my @cmd;
@@ -2487,7 +2488,10 @@ sub mime
     {
       if (-x '/usr/bin/upx')
         {
-	  $r[0] .= '+upx' unless run(['/usr/bin/upx', '-q', '-q', '-t', $in{file}]);
+	  # upx refuses to read symlinks. Work around this.
+	  my $in_file = $in{file};
+	  $in_file = readlink($in{file}) if -l $in{file};
+	  $r[0] .= '+upx' unless run(['/usr/bin/upx', '-q', '-q', '-t', $in_file]);
 	}
     }
 
