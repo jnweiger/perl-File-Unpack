@@ -44,5 +44,6 @@ t/data/lxknf09SCc0.bin
 t/data/monotone.info
 t/data/pdftex-a.txt
 t/data/test.mht
+t/data/Archive.pax
 
 META.yml                                 Module meta-data (added by MakeMaker)

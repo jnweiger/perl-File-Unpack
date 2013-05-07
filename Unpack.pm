@@ -78,10 +78,10 @@ File::Unpack - A strong bz2/gz/zip/tar/cpio/rpm/deb/cab/lzma/7z/rar/... archive 
 
 =head1 VERSION
 
-Version 0.59
+Version 0.60
 =cut
 
-our $VERSION = '0.59';
+our $VERSION = '0.60';
 
 POSIX::setlocale(&POSIX::LC_ALL, 'C');
 $ENV{PATH} = '/usr/bin:/bin';
@@ -2267,6 +2267,15 @@ sub mime
   my @r = ($mime1, $enc, $flm->describe_contents($in{buf}) );
   my $mime2;
 
+  
+  if ($mime1 =~ m{^application/xml})
+    {
+      # This is horrible from a greedy text cruncher perspective:
+      # although xml is a plain text syntax, it is reported by flm to be 
+      # outside text/*
+      $r[0] = "text/x-application-xml";
+    }
+
   if ($mime1 =~ m{^text/x-(?:pascal|fortran)$})
     {
       # xterm.desktop
@@ -2342,6 +2351,15 @@ sub mime
       $mime2 ||= 'application/x-text-mixed' if -T $in{file};
 
       $r[0] = $mime2 if $mime2;
+    }
+
+  if ($r[0] eq 'application/octet-stream')
+    {
+      if ($r[2] =~ m{\bcpio\s+archive\b}i)
+        {
+	  # Mac pax files are gzipped cpio: 'ASCII cpio archive (pre-SVR4 or odc)'
+	  $r[0] = 'application/x-cpio';
+	}
     }
 
   my $uncomp_buf = '';
