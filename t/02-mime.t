@@ -46,8 +46,13 @@ my $sample = 'monotone.info';	# one of the below files, without regexps, for fur
 
   ## actually 'text/x-xslfo'
   'columns-snippet.fo' => 
-  	[ qr{^(text/plain|application/xml)$}, 'us-ascii',
+  	[ qr{^(text/plain|application/xml|text/x-application-xml)$}, 'us-ascii',
 	  'XML  document text'],
+
+  ## actually 'application/x-pax
+  'Archive.pax' => 
+  	[ 'application/x-cpio', 'binary', 
+	  'ASCII cpio archive (pre-SVR4 or odc)' ],
 
   'empty.odt' => 
   	[ 'application/vnd.oasis.opendocument.text+zip', qr{^(binary|)$},

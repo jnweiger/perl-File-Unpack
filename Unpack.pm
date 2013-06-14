@@ -78,10 +78,10 @@ File::Unpack - A strong bz2/gz/zip/tar/cpio/rpm/deb/cab/lzma/7z/rar/... archive 
 
 =head1 VERSION
 
-Version 0.61
+Version 0.63
 =cut
 
-our $VERSION = '0.61';
+our $VERSION = '0.63';
 
 POSIX::setlocale(&POSIX::LC_ALL, 'C');
 $ENV{PATH} = '/usr/bin:/bin';
@@ -111,7 +111,8 @@ sub _default_helper_dir { $ENV{FILE_UNPACK_HELPER_DIR}||'/usr/share/File-Unpack/
 my @builtin_mime_helpers = (
   # mimetype pattern          # suffix_re           # command with redirects, as defined with IPC::Run::run
 
-  # Requires: xz bzip2 gzip unzip
+  # Requires: xz bzip2 gzip unzip lzip
+  [ 'application=x-lzip',    qr{(?:lz)},           [qw(/usr/bin/lzip -dc       %(src)s       > %(destfile)s) ],
   [ 'application=xz',        qr{(?:xz|lz(ma)?)},   [qw(/usr/bin/lzcat)],  qw(< %(src)s       > %(destfile)s) ],
   [ 'application=xz',        qr{(?:xz|lz(ma)?)},   [qw(/usr/bin/xz      -dc    %(src)s)], qw(> %(destfile)s) ],
   [ 'application=lzma',      qr{(?:xz|lz(ma)?)},   [qw(/usr/bin/lzcat)],  qw(< %(src)s       > %(destfile)s) ],
