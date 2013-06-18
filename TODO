@@ -1,3 +1,9 @@
+				jw, Tue Jun 18 15:09:19 CEST 2013
+
+Feature: support *.phar files. Example: install-pear-nozlib.phar from package php5.
+This example wants write access to /usr/share/php5/PEAR/*
+No idea... (Forget fakeroot. It fakes a root user, not a root filesystem)
+
 				jw, Thu Mar 14 19:51:33 CET 2013
 
 file_unpack -L logfile.log .
