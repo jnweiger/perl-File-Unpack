@@ -78,10 +78,10 @@ File::Unpack - A strong bz2/gz/zip/tar/cpio/rpm/deb/cab/lzma/7z/rar/... archive 
 
 =head1 VERSION
 
-Version 0.63
+Version 0.64
 =cut
 
-our $VERSION = '0.63';
+our $VERSION = '0.64';
 
 POSIX::setlocale(&POSIX::LC_ALL, 'C');
 $ENV{PATH} = '/usr/bin:/bin';
@@ -665,8 +665,15 @@ sub new
 sub DESTROY
 {
   my $self = shift;
-  # when we unpack() processes an input, it should delete {lfp} afterwards.
-  if ($self->{input} and $self->{lfp})
+  # when unpack() processes an input, it should delete {lfp} afterwards.
+  # Added some 'or' cases, as $self->{input} might be empty, although we had processed an input.
+  # 
+  # We rather catch an error, than produce incomplete output.
+  # This happens with ksh/ast-base.2012-08-01.tar.bz2 after unpack('.../ast-base.2012-08-01/src/cmd/pax/data/a'): not much file or directory
+  # 
+  if (($self->{input} or
+       ($self->{lfp_printed}||0) or
+       ($self->{recursion_level}||0)) and $self->{lfp})
     {
       if ($self->{log_type} eq 'plain')
         {
@@ -842,7 +849,7 @@ sub unpack
       if ($self->{follow_file_symlinks} && $archive =~ m{^(.*)/(.*?)$})
         {
 	  # we solve both issues by doing this:
-	  # chop off the file name; expand the path; re-add the filename.
+	  # chop off the filename; expand the path; re-add the filename.
 	  my ($a_path, $a_file) = ($1,$2);
           $a_path = Cwd::fast_abs_path($a_path) if -e $a_path;
 	  $archive = $a_path . '/' . $a_file;
@@ -885,7 +892,9 @@ sub unpack
 
   unless (-e $archive)
     {
-      push @{$self->{error}}, "unpack('$archive'): no such file or directory";
+      # contstucted $archive wrongly
+      # e.g. we have 'pax/data/a/' instead of 'pax/data/_fu_3CEuA/a/'
+      push @{$self->{error}}, "unpack('$archive'): not much file or directory; ";
       return 1;
     }
 
@@ -1047,6 +1056,12 @@ sub unpack
 	      my $unpacked = $self->_run_mime_helper($h, $archive, $new_name, $destdir, 
 	      				$m->[0], $m->[2], $self->{configdir});
 
+              unless (ref $unpacked or -e $unpacked)
+                {
+                  warn("archive=$archive, new_name=$new_name\n");
+		  die("assert -e '$unpacked'") 
+                }
+
 	      return 0 if $self->{no_op};
 	      if (ref $unpacked)
 	        {
@@ -1093,7 +1108,8 @@ sub unpack
 	      else
 		{
 		  # normal case: mime helper placed all 
-		  # in a directory called $unpacked
+		  # in a directory (or file) called $unpacked
+
 
 		  if ($archive =~ m{^\Q$self->{destdir}\E})
 		    {
@@ -1479,6 +1495,9 @@ sub _run_mime_helper
 },
     });
     
+  # system("ls -la $jail_base/..; find $jail_base");
+  # print Dumper \@r;
+
   chmod 0700, $jail_base if $self->{jail_chmod0};
   chdir $cwd or die "cannot chdir back to cwd: chdir($cwd): $!";
   my @nonzero = grep { $_ } @r;
@@ -1528,8 +1547,10 @@ sub _run_mime_helper
       last if scalar @found != 1;
       $wanted_name = $found0 if $i == $dot_dot_safeguard;
       last unless -d $jail_base . "/" . $found0;
-      rename $jail_base, $jail_tmp;
-      rename $jail_tmp . "/" . $found0, $jail_base;
+      # assert writable dirs. needed for ksh/ast-base.2012-08-01.tar.bz2/src/cmd/pax/data/ro.dat
+      chmod(0755, $jail_base . "/" . $found0);	
+      rename $jail_base, $jail_tmp or die("4:$i rename($jail_base, $jail_tmp) failed: $!");
+      rename $jail_tmp . "/" . $found0, $jail_base or die("5:$i rename($jail_tmp .'/'. $found0, $jail_base) failed: $!");
       rmdir $jail_tmp or last;
     }
 
@@ -1558,17 +1579,17 @@ sub _run_mime_helper
 
 	  if ($#found == 0 and $found0 eq $wanted_name)
 	    {
-              rename "$jail_base/$found0", $wanted_path;
+              rename "$jail_base/$found0", $wanted_path or die "1 rename($jail_base/$found0, $wanted_path) failed: $!";
 	      rmdir $jail_base;
 	    }
 	  else
 	    {
-              rename $jail_base, $wanted_path;
+              rename $jail_base, $wanted_path or die "2 rename($jail_base, $wanted_path) failed: $!";
 	    }
 	}
       else
         {
-          rename $jail_base, $wanted_path;
+          rename $jail_base, $wanted_path or die "3 rename($jail_base, $wanted_path) failed: $!";
 	}
       $unpacked = $wanted_path;
     }

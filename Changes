@@ -1,3 +1,9 @@
+0.64	jw Mon Jul 29 20:54:55 CEST 2013
+        - assert writable dirs in _run_mime_helper while disassembling jail.
+	  needed for ksh/ast-base.2012-08-01.tar.bz2/src/cmd/pax/data/ro.dat
+	- all rename()s in _run_mime_helper() equipped with or die.
+	- DESTROY() now handles more cases: Adding the epilog when missing is paramount.
+
 0.63	jw Fri Jun 14 12:08:25 CEST 2013
 	- added check for lzip, please test with
 	  /space/legaldb_nfs/sha256/pu/fF/6EtJ9m+nlIZ_aDn2nL2QiBahLsFUhJxKcLAv3zA
