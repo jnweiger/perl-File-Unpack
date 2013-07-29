@@ -112,7 +112,7 @@ my @builtin_mime_helpers = (
   # mimetype pattern          # suffix_re           # command with redirects, as defined with IPC::Run::run
 
   # Requires: xz bzip2 gzip unzip lzip
-  [ 'application=x-lzip',    qr{(?:lz)},           [qw(/usr/bin/lzip -dc       %(src)s       > %(destfile)s) ],
+  [ 'application=x-lzip',    qr{(?:lz)},           [qw(/usr/bin/lzip -dc       %(src)s       > %(destfile)s) ] ],
   [ 'application=xz',        qr{(?:xz|lz(ma)?)},   [qw(/usr/bin/lzcat)],  qw(< %(src)s       > %(destfile)s) ],
   [ 'application=xz',        qr{(?:xz|lz(ma)?)},   [qw(/usr/bin/xz      -dc    %(src)s)], qw(> %(destfile)s) ],
   [ 'application=lzma',      qr{(?:xz|lz(ma)?)},   [qw(/usr/bin/lzcat)],  qw(< %(src)s       > %(destfile)s) ],
