@@ -12,6 +12,7 @@ children_fuser.pl
 helper/text=x-shellscript
 helper/application=x-shellscript
 helper/application=x-iso9660-image
+helper/application=msword
 
 contrib/stringsx.pl
 contrib/stringsx.c
@@ -28,6 +29,7 @@ t/03-exclude.t
 t/04-subdir.t
 t/05-list.t
 t/06-logfile.t
+t/07-cmdline.t
 
 t/data/Desktop.directory
 t/data/IPA-snippet.pfa
@@ -41,6 +43,7 @@ t/data/xterm-snippet.desktop
 t/data/lxknf09SCc0.bin
 t/data/monotone.info
 t/data/pdftex-a.txt
-# t/data/test.mht
+t/data/test.mht
+t/data/Archive.pax
 
 META.yml                                 Module meta-data (added by MakeMaker)
