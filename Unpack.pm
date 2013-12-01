@@ -30,7 +30,7 @@
 #   - rpm files should extract all header info in readable format.
 #   - do we rely on rpm2cpio to handle them all: 
 #      rpm -qp --nodigest --nosignature --qf "%{PAYLOADCOMPRESSOR}" $f 
-#   - m{\.(otf|ttf|ps|eps)$}i)
+#   - m{\.(otf|ttf|ps|eps)$}i
 #   - application/x-frame		# xorg-modular/doc/xorg-docs/specs/XPRINT/xp_libraryTOC.doc
 #
 # * blacklisting?
@@ -52,6 +52,7 @@ BEGIN
  # Requires: shared-mime-info
  eval 'use File::LibMagic;';		# only needed in mime(); mime() dies, if missing
  eval 'use File::MimeInfo::Magic;';	# only needed in mime(); okay, if missing.
+ # unless builtin!
  eval 'use Compress::Raw::Lzma;';	# only needed in mime(); for finding lzma.
  eval 'use Compress::Raw::Bzip2;';	# only needed in mime(); for finding second level types
  eval 'use Compress::Raw::Zlib;';	# only needed in mime(); for finding second level types
