@@ -30,6 +30,7 @@ t/04-subdir.t
 t/05-list.t
 t/06-logfile.t
 t/07-cmdline.t
+t/08-survive-corrupt.t
 
 t/data/Desktop.directory
 t/data/IPA-snippet.pfa
@@ -45,5 +46,7 @@ t/data/monotone.info
 t/data/pdftex-a.txt
 t/data/test.mht
 t/data/Archive.pax
+t/data/bad34.pdf
+t/data/good10.pdf
 
 META.yml                                 Module meta-data (added by MakeMaker)

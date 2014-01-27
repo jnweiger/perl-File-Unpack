@@ -24,7 +24,7 @@ my $log2 = JSON::from_json(join '', <IN>);
 close IN;
 
 # check if all files from data reappear in the log.
-my @missing = ();
+my %missing;
 opendir DIR, "t/data";
 while (my $f = readdir DIR)
   {
@@ -32,13 +32,23 @@ while (my $f = readdir DIR)
     next if $log1->{unpacked}{$f};
     my $ff = "$log1->{input}/$f";
     next if $log1->{unpacked}{$ff} and $log1->{unpacked}{$ff}{unpacked};
-    push @missing, $f;
+      
+    $missing{$f} = 1;
+
+    # search, in case it was 'passed' with a different name.
+    for my $u (values %{$log1->{unpacked}})
+      {
+        # happens with bad34.pdf
+        delete $missing{$f} if $u->{passed} and $u->{input}||'' eq $ff;
+      }
   }
 closedir DIR;
-if ('pdftex-a.txt' eq pop(@missing)) 
+if (exists $missing{'pdftex-a.txt'}) 
   {
-    warn "known bug: missing file after helper failure\n";
+    delete $missing{'pdftex-a.txt'};
+    warn "known bug: missing file after helper failure: pdftex-a.txt\n";
   }
+my @missing = keys %missing;
 ok($#missing < 0, "all input files appear in logfile");
 if ($#missing >= 0)
   {

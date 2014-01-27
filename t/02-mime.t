@@ -22,6 +22,12 @@ my $sample = 'monotone.info';	# one of the below files, without regexps, for fur
 (
   # Filename => [ mimetype, encoding, ... comments ]
 
+  ## these two are from SUSE:Factory:Head/qpdf%5.1.0%r23/qpdf-5.1.0/qpdf/qtest/qpdf/
+  'bad34.pdf' => 
+  	[ 'application/pdf', 'us-ascii', 'PDF document, version 1.3' ],
+  'good10.pdf' => 
+  	[ 'application/pdf', 'us-ascii', 'PDF document, version 1.3' ],
+
   ## 0.22 used to say application/x-lzma, but true binary data. Not even compressed.
   'lxknf09SCc0.bin' => 
   	[ 'application/octet-stream', qr{^(binary|)$} ], 

@@ -79,10 +79,10 @@ File::Unpack - A strong bz2/gz/zip/tar/cpio/rpm/deb/cab/lzma/7z/rar/... archive 
 
 =head1 VERSION
 
-Version 0.65
+Version 0.66
 =cut
 
-our $VERSION = '0.65';
+our $VERSION = '0.66';
 
 POSIX::setlocale(&POSIX::LC_ALL, 'C');
 $ENV{PATH} = '/usr/bin:/bin';
@@ -813,6 +813,8 @@ files were created, also with these files.
 
 Symbolic links are ignored while unpacking.
 
+Currently you can call C<unpack> only once.
+
 =cut
 
 sub unpack
@@ -1054,8 +1056,11 @@ sub unpack
 	      #     $self->logf($archive => { unpacking => $h->{fmt_p} });
 	      #   }
 	        
-	      my $unpacked = $self->_run_mime_helper($h, $archive, $new_name, $destdir, 
+	      my ($unpacked, $diag) = 
+	         $self->_run_mime_helper($h, $archive, $new_name, $destdir, 
 	      				$m->[0], $m->[2], $self->{configdir});
+
+	      # die Dumper "_run_mime_helper: $archive, $new_name, $destdir", readlink($unpacked), $unpacked;
 
               unless (ref $unpacked or -e $unpacked)
                 {
@@ -1068,20 +1073,25 @@ sub unpack
 	        {
 		  # a ref here means, something went wrong.
 		  $data->{failed} = $h->{fmt_p};
-		  $data->{error} = $unpacked->{error};
+		  $data->{error}  = $unpacked->{error};
 		  $data->{stderr} = $unpacked->{stderr} if defined $unpacked->{stderr};
 		  $self->logf($archive => $data);
 		  $self->{file_count}++;
 		  $self->{helper_errors}++;
 		}
-	      elsif ($unpacked eq "$destdir/$new_name" and 
-	             readlink($unpacked)||'' eq $archive)
+	      elsif (readlink($unpacked)||'' eq $archive)
 	        {
 		  # a symlink backwards means, there is nothing to unpack here. take it as is.
 		  unlink $unpacked;
 		  rmdir $destdir if $self->{archive_name_as_dir}; 	# now an empty dir.
 		  $data->{passed} = $h->{name};
 		  $data->{input} = $self->loggable_pathname($archive);
+		  $data->{cmd} = $h->{fmt_p};
+		  {
+		    local $Data::Dumper::Terse = 1;
+		    local $Data::Dumper::Indent = 0;
+		    $data->{diag} = Dumper $diag if $diag;
+		  }
 
 		  if ($archive =~ m{^\Q$self->{destdir}\E})
 		    {
@@ -1600,8 +1610,9 @@ sub _run_mime_helper
     {
       if (!-s $unpacked)
         {
-	  print STDERR "Ooops, only one empty file after unpacking???\n" if $self->{verbose};
-	  unlink $unpacked; symlink $args->{src}, $unpacked;
+	  print STDERR "Ooops, only one empty file -> symlink back\n" if $self->{verbose};
+	  unlink $unpacked; 
+	  symlink $args->{src}, $unpacked;
 	}
       elsif (-s $unpacked eq (my $s = -s $args->{src}))
 	{
@@ -1610,14 +1621,16 @@ sub _run_mime_helper
 	  ## Compare the files. If they are identical, stop this:
 	  if (File::Compare::cmp($args->{src}, $unpacked) == 0)
 	    {
-	      print STDERR "Oops, identical after unpacking!\n" if $self->{verbose};
+	      print STDERR "Oops, identical -> symlink back\n" if $self->{verbose};
 	      unlink $unpacked; 
 	      symlink $args->{src}, $unpacked;
 	    }
 	}
     }
 
-  return $unpacked;
+  my $diag = undef;
+  $diag->{stderr} = $run_error if defined $run_error;
+  return ($unpacked, $diag);
 }
 
 sub _unused_pathname
