@@ -54,7 +54,7 @@ sub MY::postamble
 {
   return q{
 file_unpack: file_unpack.pl Makefile
-	$(CP) $< $@
+	$(CP) file_unpack.pl $@
 	## wait, so that -M < -M succeeds in ExtUtils/Command/MM.pm
 	(sleep 1; echo .nf; $(PERL) $@ --help) > $(INST_MAN1DIR)/$@.1 || true
 };
