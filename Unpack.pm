@@ -79,11 +79,12 @@ File::Unpack - A strong bz2/gz/zip/tar/cpio/rpm/deb/cab/lzma/7z/rar/... archive 
 
 =head1 VERSION
 
-Version 0.67
+Version 0.69
 =cut
 
 # We'll have 1.x versions only after minfree() has a baseline implementation.
-our $VERSION = '0.67';
+# Please run perl Makefile.PL after changing the version here.
+our $VERSION = '0.69';
 
 POSIX::setlocale(&POSIX::LC_ALL, 'C');
 $ENV{PATH} = '/usr/bin:/bin';
@@ -109,6 +110,8 @@ my $RECURSION_LIMIT = 200;
 sub _default_helper_dir { $ENV{FILE_UNPACK_HELPER_DIR}||'/usr/share/File-Unpack/helper' }
 
 # we use '=' in the mime_name, this expands to '/(x\-|ANY\+)?'
+##
+## Caution: always use (?: ... ) below for grouping, so that no extra capturing clauses are created.
 
 my @builtin_mime_helpers = (
   # mimetype pattern          # suffix_re           # command with redirects, as defined with IPC::Run::run
@@ -150,7 +153,7 @@ my @builtin_mime_helpers = (
 
   # Requires: tar rpm cpio
   [ 'application=tar',       qr{(?:tar|gem)},      [\&_locate_tar,  qw(-xf %(src)s)] ],
-  [ 'application=tar+bzip2', qr{tar\.bz2},         [\&_locate_tar, qw(-jxf %(src)s)] ],
+  [ 'application=tar+bzip2', qr{(?:tar\.bz2|tbz)}, [\&_locate_tar, qw(-jxf %(src)s)] ],
   [ 'application=tar+gzip',  qr{t(?:ar\.gz|gz)},   [\&_locate_tar, qw(-zxf %(src)s)] ],
 #  [ 'application=tar+gzip',  qr{t(?:ar\.gz|gz)},      [qw(/home/testy/src/C/slowcat)], qw(< %(src)s |), [\&_locate_tar, qw(-zxf -)] ],
   [ 'application=tar+lzma',  qr{tar\.(?:xz|lzma|lz)}, [qw(/usr/bin/lzcat)], qw(< %(src)s |), [\&_locate_tar, qw(-xf -)] ],

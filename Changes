@@ -1,3 +1,6 @@
+0.69	jw Mon Jul 21 17:21:13 CEST 2014
+	- fixed https://github.com/jnweiger/perl-File-Unpack/issues/2
+
 0.67	jw Mon Jul 21 16:14:49 CEST 2014
 	- Semantics change of file_unpack.pl:
 	  Default to one_shot unless $0 contains 'deep'. New --deep option to also switch this one.
