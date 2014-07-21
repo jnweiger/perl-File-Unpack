@@ -2,7 +2,7 @@
 #
 # file_unpack.pl -- Demo of File::Unpack features.
 # 
-# (C) 2010-2012, jnw@cpan.org, all rights reserved.
+# (C) 2010-2014, jnw@cpan.org, all rights reserved.
 # Distribute under the same license as Perl itself.
 #
 # 2010-06-29, jw -- initial draught
@@ -16,6 +16,7 @@
 # 2012-02-16, jw -- added -A for archive_name_as_dir.
 #                   using {log_type} == 'PLAIN' unless -L
 # 2013-01-25, jw -- added -f for follow_file_symlinks.
+# 2014-07-21, jw -- default to one_shot unless named *deep*.
 
 use Data::Dumper;
 $Data::Dumper::Terse = 1;
@@ -35,7 +36,9 @@ my $list_only;
 my $list_perlish;
 my @mime_helper_dirs;
 
-my %opt = ( verbose => 1, maxfilesize => '2.6G', one_shot => 0, no_op => 0, world_readable => 0, log_fullpath => 0, archive_name_as_dir => 0, follow_file_symlinks => 0, log_type => 'PLAIN');
+my %opt = ( verbose => 1, maxfilesize => '2.6G', one_shot => 1, no_op => 0, world_readable => 0, log_fullpath => 0, archive_name_as_dir => 0, follow_file_symlinks => 0, log_type => 'PLAIN');
+
+$opt{one_shot} = 0 if $0 =~ m{deep[^/]*$};
 
 push @mime_helper_dirs, "$FindBin::RealBin/helper" if -d "$FindBin::RealBin/helper";
 
@@ -51,6 +54,7 @@ GetOptions(
 	"logfile|L=s"  		=> \$opt{logfile},
 	"fullpath-log|F" 	=> \$opt{log_fullpath},
 	"one-shot|one_shot|1"   => \$opt{one_shot},
+	"deep|recursive"        => sub { $opt{one_shot} = 0; },
 	"mimetype|m+"  		=> \$mime_only,
 	"no_op|no-op|noop|n+" 	=> \$opt{no_op},
 	"list-helpers|l+" 	=> \$list_only,
@@ -108,6 +112,12 @@ Valid options are:
 
  -1 --one-shot
  	Make unpacker non-recursive. Perform one level of unpacking only.
+	This is the default unless the name of the unpacker contains the substring 'deep'.
+
+ --deep
+ --recursive
+ 	Make unpacker recursive. Perform all possible levels of unpacking.
+	This is the default if the name of the unpacker contains the substring 'deep'.
 
  -h --help -?
         Print this online help.

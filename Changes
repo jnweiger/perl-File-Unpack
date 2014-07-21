@@ -1,3 +1,14 @@
+0.67	jw Mon Jul 21 16:14:49 CEST 2014
+	- Semantics change of file_unpack.pl:
+	  Default to one_shot unless $0 contains 'deep'. New --deep option to also switch this one.
+	  This is a move towards least surprise. No other unpacker has this deep feature.
+
+	- Fixed builtin helper for application=x-lzip to conform to IPC::Run::run() semantics.
+	- Added an example how to write a mime helper script to the documentation.
+	- Fixed diagnostics in case a helper script fails.
+	- Several smallish doku improvements.
+	- Updated test suite to accept encoding 'unknown' as a synonym to 'binary'.
+
 0.66	jw Mon Jan 27 18:57:16 CET 2014
 	- harmful filename test removed, fixing bnc#860561. 
 	  The name may not match, when symlinking back. Readlink is the only thing that counts.

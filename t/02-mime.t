@@ -30,7 +30,7 @@ my $sample = 'monotone.info';	# one of the below files, without regexps, for fur
 
   ## 0.22 used to say application/x-lzma, but true binary data. Not even compressed.
   'lxknf09SCc0.bin' => 
-  	[ 'application/octet-stream', qr{^(binary|)$} ], 
+  	[ 'application/octet-stream', qr{^(binary|unknown|)$} ], 
 
   ## actually 'application/x-desktop' or 'text/x-desktop'
   'Desktop.directory' => 
@@ -57,11 +57,11 @@ my $sample = 'monotone.info';	# one of the below files, without regexps, for fur
 
   ## actually 'application/x-pax
   'Archive.pax' => 
-  	[ 'application/x-cpio', 'binary', 
+  	[ 'application/x-cpio', qr{^(binary|unknown)$},
 	  'ASCII cpio archive (pre-SVR4 or odc)' ],
 
   'empty.odt' => 
-  	[ 'application/vnd.oasis.opendocument.text+zip', qr{^(binary|)$},
+  	[ 'application/vnd.oasis.opendocument.text+zip', qr{^(binary|unknown|)$},
 	  'Zip archive data, at least v2.0 to extract, mime type application/vnd OpenDocument Text'],
 
   'ruhyphal.tex' => 
@@ -75,7 +75,7 @@ my $sample = 'monotone.info';	# one of the below files, without regexps, for fur
 	  'multipart/related; start=<op.mhtml.1250319979062.7d507541390148, '],
 
   'test2.tga' => 
-  	[ 'image/x-tga', qr{^(binary|)$},
+  	[ 'image/x-tga', qr{^(binary|unknown|)$},
 	  'Targa image data - RGB - RLE 32 x 32',
 	  ['application/octet-stream','image/x-tga']],
 
@@ -86,7 +86,7 @@ my $sample = 'monotone.info';	# one of the below files, without regexps, for fur
 
   ## File::LibMagic says application/octet-stream here:
   'monotone.info' => 
-  	[ 'application/x-text-mixed', 'binary', 
+  	[ 'application/x-text-mixed', qr{^(binary|unknown)$}, 
 	  'data', ['application/octet-stream','application/x-text-mixed']],
 
   ## this is actually plain text, but we are fooled by its apparent magic.

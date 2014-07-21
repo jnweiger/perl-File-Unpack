@@ -1,5 +1,5 @@
 #
-# (C) 2010-2013, jnw@cpan.org, all rights reserved.
+# (C) 2010-2014, jnw@cpan.org, all rights reserved.
 # Distribute under the same license as Perl itself.
 #
 #
@@ -79,10 +79,11 @@ File::Unpack - A strong bz2/gz/zip/tar/cpio/rpm/deb/cab/lzma/7z/rar/... archive 
 
 =head1 VERSION
 
-Version 0.66
+Version 0.67
 =cut
 
-our $VERSION = '0.66';
+# We'll have 1.x versions only after minfree() has a baseline implementation.
+our $VERSION = '0.67';
 
 POSIX::setlocale(&POSIX::LC_ALL, 'C');
 $ENV{PATH} = '/usr/bin:/bin';
@@ -113,14 +114,14 @@ my @builtin_mime_helpers = (
   # mimetype pattern          # suffix_re           # command with redirects, as defined with IPC::Run::run
 
   # Requires: xz bzip2 gzip unzip lzip
-  [ 'application=x-lzip',    qr{(?:lz)},           [qw(/usr/bin/lzip -dc       %(src)s       > %(destfile)s) ] ],
+  [ 'application=x-lzip',    qr{(?:lz)},           [qw(/usr/bin/lzip -dc       %(src)s)], qw(> %(destfile)s) ],
   [ 'application=xz',        qr{(?:xz|lz(ma)?)},   [qw(/usr/bin/lzcat)],  qw(< %(src)s       > %(destfile)s) ],
-  [ 'application=xz',        qr{(?:xz|lz(ma)?)},   [qw(/usr/bin/xz      -dc    %(src)s)], qw(> %(destfile)s) ],
+  [ 'application=xz',        qr{(?:xz|lz(ma)?)},   [qw(/usr/bin/xz   -dc       %(src)s)], qw(> %(destfile)s) ],
   [ 'application=lzma',      qr{(?:xz|lz(ma)?)},   [qw(/usr/bin/lzcat)],  qw(< %(src)s       > %(destfile)s) ],
-  [ 'application=lzma',      qr{(?:xz|lz(ma)?)},   [qw(/usr/bin/xz      -dc    %(src)s)], qw(> %(destfile)s) ],
-  [ 'application=bzip2',     qr{bz2},           [qw(/usr/bin/bunzip2 -dc -f %(src)s)], qw(> %(destfile)s) ],
-  [ 'application=gzip',      qr{(?:gz|Z)},         [qw(/usr/bin/gzip -dc -f %(src)s)], qw(> %(destfile)s) ],
-  [ 'application=compress',  qr{(?:gz|Z)},         [qw(/usr/bin/gzip -dc -f %(src)s)], qw(> %(destfile)s) ],
+  [ 'application=lzma',      qr{(?:xz|lz(ma)?)},   [qw(/usr/bin/xz   -dc       %(src)s)], qw(> %(destfile)s) ],
+  [ 'application=bzip2',     qr{bz2},           [qw(/usr/bin/bunzip2 -dc -f    %(src)s)], qw(> %(destfile)s) ],
+  [ 'application=gzip',      qr{(?:gz|Z)},         [qw(/usr/bin/gzip -dc -f    %(src)s)], qw(> %(destfile)s) ],
+  [ 'application=compress',  qr{(?:gz|Z)},         [qw(/usr/bin/gzip -dc -f    %(src)s)], qw(> %(destfile)s) ],
 
   # Requires: sharutils
   [ 'text=uuencode',        qr{uu},                [qw(/usr/bin/uudecode -o %(destfile)s %(src)s)] ],
@@ -138,7 +139,8 @@ my @builtin_mime_helpers = (
 
   # Requires: binutils
   [ 'application=archive',    qr{(?:a|ar|deb)},    [qw(/usr/bin/ar x %(src)s)] ],
-  [ 'application=x-deb',      qr{(?:a|ar|deb)},    [qw(/usr/bin/ar x %(src)s)] ],
+  [ 'application=x-deb',               qr{deb},    [qw(/usr/bin/ar x %(src)s)] ],
+  [ 'application=x-debian-package',    qr{deb},    [qw(/usr/bin/ar x %(src)s)] ],
 
   # Requires: cabextract
   [ 'application/vnd.ms-cab-compressed', qr{cab},  [qw(/usr/bin/cabextract -q %(src)s)] ],
@@ -215,9 +217,7 @@ MIME types.  We call it strong, because it is not fooled by file suffixes, or
 multiply wrapped packages. It recursively descends into each archive found
 until it finally exposes all unpackable payload contents.
 
-A precise logfile can be written, describing MIME types and unpack actions.
-Most of the known archive file formats are supported. Shell-script-style
-plugins can be added to support additinal formats.
+A logfile can be written, precisely describing MIME types and unpack actions.
 
     use File::Unpack;
 
@@ -241,6 +241,18 @@ plugins can be added to support additinal formats.
       }
 
     ...
+
+Most of the known archive file formats are supported. Shell-script-style
+plugins can be added to support additinal formats.
+
+Helper shell-scripts can be added to support additional mime-types. Example:
+
+F<< $ echo "ar x $1" > /usr/share/File-Unpack/helper/application=x-debian-package >>
+
+F<< $ chmod a+x /usr/share/File-Unpack/helper/application=x-debian-package >>
+
+This example creates a trivial external equivalent of the builtin MIME helper for *.deb packages. 
+For details see the documentation of the C<unpack()> method.
 
 C<unpack> examines the contents of an archive file or directory using an extensive 
 mime-type analysis. The contents is unpacked recursively to the given destination
@@ -305,8 +317,10 @@ The parameter C<archive_name_as_dir> causes the unpacker to store all unpacked
 files inside a directory with the same name as their archive. 
 
 The default depends on how many files are unpacked from the archive: If exactly one
-file is unpacked, then no directory is used. E.g. F<foo.tar.gz> would unpack to
-F<foo.tar>. If multiple files are unpacked, and the suffix of the archive can
+file (or one toplevel directory) is unpacked, then no extra directory is used. 
+E.g. F<foo.tar.gz> would unpack to F<foo.tar> or 
+F<foo-1.0.zip> would unpack to F<foo-1.0/*> and no files outside this directory.
+If multiple files (or directories) are unpacked, and the suffix of the archive can
 be removed with the C<suffix_re> of its C<mime_helper>, then the
 shortened name is used as a directory. E.g. F<foo.tar> would unpack to
 F<foo/*>. Otherwise F<._> is appended to the archive name. E.g. F<foo.tar> would unpack to
@@ -733,12 +747,14 @@ with a ' ' whitespace, and end in a ',' comma. Everything else is prolog or epil
 
 The actual unpacking is dispatched to MIME type specific helpers,
 selected using C<mime>. A MIME helper can either be built-in code, or an
-external program (or shell-script) found in a directory registered with
+external shell-script found in a directory registered with
 C<mime_helper_dir>. The standard place for external helpers is
 F</usr/share/File-Unpack/helper>; it can be changed by the environment variable
 F<FILE_UNPACK_HELPER_DIR> or the C<new> parameter C<helper_dir>.
 
-A MIME helper is called with 6 parameters:
+The naming of helper scripts is described under C<mime_helper()>.
+
+A MIME helper must have executable permission and is called with 6 parameters:
 source_path, destfile, destination_path, mimetype, description, and config_dir. 
 Note, that destination_path is a freshly created empty working directory, even
 if the unpacker is expected to unpack only a single file. The unpacker is
@@ -1507,7 +1523,7 @@ sub _run_mime_helper
     });
     
   # system("ls -la $jail_base/..; find $jail_base");
-  # print Dumper \@r;
+  # print STDERR Dumper \@r;
 
   chmod 0700, $jail_base if $self->{jail_chmod0};
   chdir $cwd or die "cannot chdir back to cwd: chdir($cwd): $!";
@@ -1516,7 +1532,7 @@ sub _run_mime_helper
   # TODO: handle failure
   # - remove all, 
   # - retry with a fallback helper , if any.
-  printf STDERR "Non-Zero return value: $r[0]: %s\n", fmt_run_shellcmd(@cmd)
+  printf STDERR "Non-Zero return value: $nonzero[0]: %s\n", fmt_run_shellcmd(@cmd)
     if $nonzero[0] and $self->{verbose};
 
   # FIXME: fallback helper not implemented
@@ -1805,6 +1821,9 @@ last added takes precedence. Any external MIME helper takes precedence over buil
 
 The suffix_regexp is used to derive the destination name from the source name.
 It is not used for selecting helpers.
+
+When collecting external helper scripts via C<mime_helper_dir()>, there is no C<suffix_regexp>. Instead, 
+external helper scripts can explicitly create a toplevel directory with the desired name.
 
 Helpers are mapped to MIME types by their mime_name. The name can be constructed
 from the MIME type by replacing the '/' with a '=' character, and by using the
