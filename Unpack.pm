@@ -1081,7 +1081,7 @@ sub unpack
 
 	      # die Dumper "_run_mime_helper: $archive, $new_name, $destdir", readlink($unpacked), $unpacked;
 
-              unless (ref $unpacked or -e $unpacked)
+              unless (ref $unpacked or -e $unpacked or readlink($unpacked))
                 {
                   warn("archive=$archive, new_name=$new_name\n");
 		  die("assert -e '$unpacked'") 
