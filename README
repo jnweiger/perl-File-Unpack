@@ -1,7 +1,7 @@
 File-Unpack
 
 File::Unpack is an aggressive unpacker for archive files. We call it aggressive, 
-because it recursivly descends into any freshly unpacked file, if it appears to be an archive itself.
+because it recursively descends into any freshly unpacked file, if it appears to be an archive itself.
 It also uncompresses files where needed. The ultimate goal of File::Unpack is
 to extract as much readable text (ascii or any other encoding) as possible.
 Most of the currently known archive file formats are supported.
