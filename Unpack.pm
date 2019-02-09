@@ -246,7 +246,7 @@ A logfile can be written, precisely describing MIME types and unpack actions.
     ...
 
 Most of the known archive file formats are supported. Shell-script-style
-plugins can be added to support additinal formats.
+plugins can be added to support additional formats.
 
 Helper shell-scripts can be added to support additional mime-types. Example:
 
