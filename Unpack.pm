@@ -2301,7 +2301,11 @@ sub mime
 
   ## flm can say 'cannot open \'IP\' (No such file or directory)'
   ## flm can say 'CDF V2 Document, corrupt: Can\'t read SAT'	(application/vnd.ms-excel)
-  my $mime1 = $flm->checktype_contents($in{buf});
+  my $mime1 = eval { $flm->checktype_contents($in{buf}) };
+  if ($@) {
+    warn $@;
+    return [ 'x-system/x-error', undef, "libmimemagic exception"];
+  }
   if ($mime1 =~ m{, corrupt: } or $mime1 =~ m{^application/octet-stream\b})
     {
       # application/x-iso9660-image is reported as application/octet-stream if the buffer is short.
